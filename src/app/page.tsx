@@ -9,49 +9,74 @@ import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import { useState } from "react";
 
+type Message = {
+  role: "user" | "assistant";
+  content: string;
+};
+
 export default function Home() {
-  const [prompt, setPrompt] = useState("");
-  const [response, setResponse] = useState("");
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function handleSubmit() {
+  async function sendMessage() {
+    if (!input.trim()) return;
+
+    const userMessage: Message = {
+      role: "user",
+      content: input,
+    };
+
+    const updatedMessages = [...messages, userMessage];
+
+    setMessages(updatedMessages);
+    setInput("");
     setLoading(true);
-    setResponse("");
 
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({
+        messages: updatedMessages,
+      }),
     });
 
-    if (!res.body) return;
-
-    const reader = res.body.getReader();
+    const reader = res.body?.getReader();
     const decoder = new TextDecoder();
 
-    let done = false;
+    let assistantText = "";
 
-    while (!done) {
-      const result = await reader.read();
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
-      done = result.done;
+    if (!reader) return;
 
-      const chunk = decoder.decode(result.value);
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
 
+      const chunk = decoder.decode(value);
       const lines = chunk.split("\n").filter(Boolean);
 
       for (const line of lines) {
         try {
-          const parsed = JSON.parse(line);
+          const json = JSON.parse(line);
+          const content = json.message?.content;
 
-          if (parsed.response) {
-            setResponse((prev) => prev + parsed.response);
+          if (content) {
+            assistantText += content;
+
+            setMessages((prev) => {
+              const copy = [...prev];
+              copy[copy.length - 1] = {
+                role: "assistant",
+                content: assistantText,
+              };
+              return copy;
+            });
           }
-        } catch (err) {
-          console.error(err);
-        }
+        } catch {}
       }
     }
 
@@ -62,49 +87,63 @@ export default function Home() {
     <main className="max-w-2xl mx-auto p-6">
       <h1 className="text-3xl font-bold mb-6">Personal Chat</h1>
 
-      <textarea
-        value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
-        className="w-full border p-4 rounded-lg mb-4"
-        rows={6}
-        placeholder="Ask something..."
-      />
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto border rounded-lg p-4 space-y-4">
+        {messages.map((msg, i) => (
+          <div
+            key={i}
+            className={`p-3 rounded-lg whitespace-pre-wrap ${
+              msg.role === "user"
+                ? "bg-blue-100 ml-auto w-fit"
+                : "bg-gray-100 w-fit"
+            }`}
+          >
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                code(props) {
+                  const { children, className } = props;
 
-      <button
-        onClick={handleSubmit}
-        className="bg-black text-white px-4 py-2 rounded-lg"
-        disabled={loading}
-      >
-        {loading ? "Thinking..." : "Send"}
-      </button>
+                  const match = /language-(\w+)/.exec(className || "");
 
-      <div className="mt-6 border rounded-lg p-4 min-h-50 prose prose-neutral dark:prose-invert max-w-none">
-        <ReactMarkdown
-          remarkPlugins={[remarkGfm]}
-          components={{
-            code(props) {
-              const { children, className } = props;
+                  return match ? (
+                    <SyntaxHighlighter
+                      PreTag="div"
+                      language={match[1]}
+                      style={oneDark}
+                    >
+                      {String(children).replace(/\n$/, "")}
+                    </SyntaxHighlighter>
+                  ) : (
+                    <code className="bg-gray-200 px-1 py-0.5 rounded">
+                      {children}
+                    </code>
+                  );
+                },
+              }}
+            >
+              {msg.content}
+            </ReactMarkdown>
+          </div>
+        ))}
+      </div>
 
-              const match = /language-(\w+)/.exec(className || "");
+      <div className="mt-4 flex gap-2">
+        <textarea
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          className="w-full border p-4 rounded-lg mb-4"
+          rows={2}
+          placeholder="Ask something..."
+        />
 
-              return match ? (
-                <SyntaxHighlighter
-                  PreTag="div"
-                  language={match[1]}
-                  style={oneDark}
-                >
-                  {String(children).replace(/\n$/, "")}
-                </SyntaxHighlighter>
-              ) : (
-                <code className="bg-gray-200 px-1 py-0.5 rounded">
-                  {children}
-                </code>
-              );
-            },
-          }}
+        <button
+          onClick={() => sendMessage()}
+          className="bg-black text-white px-4 py-2 rounded-lg"
+          disabled={loading}
         >
-          {response}
-        </ReactMarkdown>
+          {loading ? "Thinking..." : "Send"}
+        </button>
       </div>
     </main>
   );
