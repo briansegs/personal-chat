@@ -1,5 +1,12 @@
 "use client";
 
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+
 import { useState } from "react";
 
 export default function Home() {
@@ -71,8 +78,33 @@ export default function Home() {
         {loading ? "Thinking..." : "Send"}
       </button>
 
-      <div className="mt-6 border rounded-lg p-4 whitespace-pre-wrap min-h-[200px]">
-        {response}
+      <div className="mt-6 border rounded-lg p-4 min-h-50 prose prose-neutral dark:prose-invert max-w-none">
+        <ReactMarkdown
+          remarkPlugins={[remarkGfm]}
+          components={{
+            code(props) {
+              const { children, className } = props;
+
+              const match = /language-(\w+)/.exec(className || "");
+
+              return match ? (
+                <SyntaxHighlighter
+                  PreTag="div"
+                  language={match[1]}
+                  style={oneDark}
+                >
+                  {String(children).replace(/\n$/, "")}
+                </SyntaxHighlighter>
+              ) : (
+                <code className="bg-gray-200 px-1 py-0.5 rounded">
+                  {children}
+                </code>
+              );
+            },
+          }}
+        >
+          {response}
+        </ReactMarkdown>
       </div>
     </main>
   );
