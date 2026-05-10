@@ -9,6 +9,7 @@ export default function Home() {
 
   async function handleSubmit() {
     setLoading(true);
+    setResponse("");
 
     const res = await fetch("/api/chat", {
       method: "POST",
@@ -18,9 +19,35 @@ export default function Home() {
       body: JSON.stringify({ prompt }),
     });
 
-    const data = await res.json();
+    if (!res.body) return;
 
-    setResponse(data.response);
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+
+    let done = false;
+
+    while (!done) {
+      const result = await reader.read();
+
+      done = result.done;
+
+      const chunk = decoder.decode(result.value);
+
+      const lines = chunk.split("\n").filter(Boolean);
+
+      for (const line of lines) {
+        try {
+          const parsed = JSON.parse(line);
+
+          if (parsed.response) {
+            setResponse((prev) => prev + parsed.response);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      }
+    }
+
     setLoading(false);
   }
 
@@ -39,15 +66,14 @@ export default function Home() {
       <button
         onClick={handleSubmit}
         className="bg-black text-white px-4 py-2 rounded-lg"
+        disabled={loading}
       >
         {loading ? "Thinking..." : "Send"}
       </button>
 
-      {response && (
-        <div className="mt-6 border rounded-lg p-4 whitespace-pre-wrap">
-          {response}
-        </div>
-      )}
+      <div className="mt-6 border rounded-lg p-4 whitespace-pre-wrap min-h-[200px]">
+        {response}
+      </div>
     </main>
   );
 }
