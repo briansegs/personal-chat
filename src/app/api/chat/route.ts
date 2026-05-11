@@ -1,5 +1,5 @@
 export async function POST(req: Request) {
-  const { messages } = await req.json();
+  const { messages, model } = await req.json();
 
   const ollamaResponse = await fetch("http://localhost:11434/api/chat", {
     method: "POST",
@@ -7,7 +7,7 @@ export async function POST(req: Request) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "llama3.1",
+      model,
       messages,
       stream: true,
     }),

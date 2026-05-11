@@ -15,11 +15,29 @@ type Message = {
   content: string;
 };
 
+type Model = "phi3" | "llama3.1" | "qwen2.5-coder";
+
+const validModels: Model[] = ["phi3", "llama3.1", "qwen2.5-coder"];
+
+function isModel(value: string): value is Model {
+  return validModels.includes(value as Model);
+}
+
 const STORAGE_KEY = "local-chat-messages";
+const MODEL = "local-chat-model";
 
 export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [model, setModel] = useState<Model>(() => {
+    if (typeof window === "undefined") {
+      return "phi3";
+    }
+
+    const saved = localStorage.getItem(MODEL);
+
+    return saved && isModel(saved) ? saved : "phi3";
+  });
   const [messages, setMessages] = useState<Message[]>(() => {
     if (typeof window === "undefined") {
       return [];
@@ -31,8 +49,11 @@ export default function Home() {
   });
 
   useEffect(() => {
+    localStorage.setItem(MODEL, model);
+  }, [model]);
+
+  useEffect(() => {
     const filtered = messages.filter((m) => {
-      // remove empty assistant messages
       if (m.role === "assistant" && m.content.trim() === "") {
         return false;
       }
@@ -41,68 +62,74 @@ export default function Home() {
 
     localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
   }, [messages]);
+
   async function sendMessage() {
-    if (!input.trim()) return;
+    if (!input.trim() || loading) return;
 
-    const userMessage: Message = {
-      role: "user",
-      content: input,
-    };
+    try {
+      const userMessage: Message = {
+        role: "user",
+        content: input,
+      };
 
-    const updatedMessages = [...messages, userMessage];
+      const updatedMessages = [...messages, userMessage];
 
-    setMessages((prev) => [...prev, userMessage]);
-    setInput("");
-    setLoading(true);
+      setMessages((prev) => [...prev, userMessage]);
+      setInput("");
+      setLoading(true);
 
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        messages: updatedMessages,
-      }),
-    });
+      const res = await fetch("/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model,
+          messages: updatedMessages,
+        }),
+      });
 
-    const reader = res.body?.getReader();
-    const decoder = new TextDecoder();
+      const reader = res.body?.getReader();
+      const decoder = new TextDecoder();
 
-    let assistantText = "";
+      let assistantText = "";
 
-    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
 
-    if (!reader) return;
+      if (!reader) return;
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
 
-      const chunk = decoder.decode(value);
-      const lines = chunk.split("\n").filter(Boolean);
+        const chunk = decoder.decode(value);
+        const lines = chunk.split("\n").filter(Boolean);
 
-      for (const line of lines) {
-        try {
-          const json = JSON.parse(line);
-          const content = json.message?.content;
+        for (const line of lines) {
+          try {
+            const json = JSON.parse(line);
+            const content = json.message?.content;
 
-          if (content) {
-            assistantText += content;
+            if (content) {
+              assistantText += content;
 
-            setMessages((prev) => {
-              const copy = [...prev];
-              copy[copy.length - 1] = {
-                role: "assistant",
-                content: assistantText,
-              };
-              return copy;
-            });
-          }
-        } catch {}
+              setMessages((prev) => {
+                const copy = [...prev];
+                copy[copy.length - 1] = {
+                  role: "assistant",
+                  content: assistantText,
+                };
+                return copy;
+              });
+            }
+          } catch {}
+        }
       }
+    } catch (error) {
+      console.error(error);
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
   return (
@@ -112,7 +139,10 @@ export default function Home() {
       <button
         onClick={() => {
           setMessages([]);
+          setModel("phi3");
+
           localStorage.removeItem(STORAGE_KEY);
+          localStorage.removeItem(MODEL);
         }}
         className="mb-4 text-sm text-red-500"
       >
@@ -160,7 +190,7 @@ export default function Home() {
         ))}
       </div>
 
-      <div className="mt-4 flex gap-2">
+      <div className="mt-4 flex flex-col gap-2 border rounded-lg p-2">
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -170,18 +200,37 @@ export default function Home() {
               sendMessage();
             }
           }}
-          className="w-full border p-4 rounded-lg mb-4"
+          className="w-full border p-4 rounded-lg"
           rows={1}
           placeholder="Ask something..."
         />
 
-        <button
-          onClick={() => sendMessage()}
-          className="bg-black text-white px-4 py-2 rounded-lg"
-          disabled={loading}
-        >
-          {loading ? "Thinking..." : "Send"}
-        </button>
+        <div className="flex items-center justify-between">
+          <select
+            name="model"
+            id="model-select"
+            value={model}
+            onChange={(e) => {
+              const value = e.target.value;
+
+              if (isModel(value)) {
+                setModel(value);
+              }
+            }}
+          >
+            <option value="phi3">phi3</option>
+            <option value="llama3.1">llama3.1</option>
+            <option value="qwen2.5-coder">qwen2.5-coder</option>
+          </select>
+
+          <button
+            onClick={() => sendMessage()}
+            className="bg-black text-white px-4 py-2 rounded-lg"
+            disabled={loading}
+          >
+            {loading ? "Thinking..." : "Send"}
+          </button>
+        </div>
       </div>
     </main>
   );
