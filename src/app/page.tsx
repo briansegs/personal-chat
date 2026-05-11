@@ -8,17 +8,39 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import { useState } from "react";
+import { useEffect } from "react";
 
 type Message = {
   role: "user" | "assistant";
   content: string;
 };
 
+const STORAGE_KEY = "local-chat-messages";
+
 export default function Home() {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (typeof window === "undefined") {
+      return [];
+    }
 
+    const saved = localStorage.getItem(STORAGE_KEY);
+
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  useEffect(() => {
+    const filtered = messages.filter((m) => {
+      // remove empty assistant messages
+      if (m.role === "assistant" && m.content.trim() === "") {
+        return false;
+      }
+      return true;
+    });
+
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+  }, [messages]);
   async function sendMessage() {
     if (!input.trim()) return;
 
@@ -29,7 +51,7 @@ export default function Home() {
 
     const updatedMessages = [...messages, userMessage];
 
-    setMessages(updatedMessages);
+    setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
 
@@ -84,11 +106,21 @@ export default function Home() {
   }
 
   return (
-    <main className="max-w-2xl mx-auto p-6">
+    <main className="w-3xl mx-auto p-6 h-screen flex flex-col">
       <h1 className="text-3xl font-bold mb-6">Personal Chat</h1>
 
+      <button
+        onClick={() => {
+          setMessages([]);
+          localStorage.removeItem(STORAGE_KEY);
+        }}
+        className="mb-4 text-sm text-red-500"
+      >
+        Clear Chat
+      </button>
+
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto border rounded-lg p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto border rounded-lg p-4 space-y-4 mb-4">
         {messages.map((msg, i) => (
           <div
             key={i}
