@@ -8,6 +8,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import { useState, useEffect, useRef } from "react";
+import { Header } from "@/components/Header";
 
 type Message = {
   role: "user" | "assistant";
@@ -163,7 +164,7 @@ export default function Home() {
 
   return (
     <main className="w-3xl mx-auto p-6 h-screen flex flex-col">
-      <h1 className="text-3xl font-bold mb-2">Personal Chat</h1>
+      <Header />
 
       <button
         onClick={() => {
