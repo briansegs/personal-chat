@@ -164,8 +164,14 @@ export default function Home() {
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && !loading) {
+              e.preventDefault();
+              sendMessage();
+            }
+          }}
           className="w-full border p-4 rounded-lg mb-4"
-          rows={2}
+          rows={1}
           placeholder="Ask something..."
         />
 
