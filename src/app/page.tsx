@@ -7,8 +7,7 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 type Message = {
   role: "user" | "assistant";
@@ -48,6 +47,23 @@ export default function Home() {
     return saved ? JSON.parse(saved) : [];
   });
 
+  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const textarea = textareaRef.current;
+
+    if (!textarea) return;
+
+    textarea.style.height = "auto";
+
+    const maxHeight = 200;
+
+    textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
+
+    textarea.style.overflowY =
+      textarea.scrollHeight > maxHeight ? "auto" : "hidden";
+  }, [input]);
+
   useEffect(() => {
     localStorage.setItem(MODEL, model);
   }, [model]);
@@ -67,6 +83,8 @@ export default function Home() {
     if (!input.trim() || loading) return;
 
     try {
+      setLoading(true);
+
       const userMessage: Message = {
         role: "user",
         content: input,
@@ -76,7 +94,6 @@ export default function Home() {
 
       setMessages((prev) => [...prev, userMessage]);
       setInput("");
-      setLoading(true);
 
       const res = await fetch("/api/chat", {
         method: "POST",
@@ -88,6 +105,10 @@ export default function Home() {
           messages: updatedMessages,
         }),
       });
+
+      if (!res.ok) {
+        throw new Error("Failed to send message");
+      }
 
       const reader = res.body?.getReader();
       const decoder = new TextDecoder();
@@ -134,7 +155,7 @@ export default function Home() {
 
   return (
     <main className="w-3xl mx-auto p-6 h-screen flex flex-col">
-      <h1 className="text-3xl font-bold mb-6">Personal Chat</h1>
+      <h1 className="text-3xl font-bold mb-2">Personal Chat</h1>
 
       <button
         onClick={() => {
@@ -144,20 +165,17 @@ export default function Home() {
           localStorage.removeItem(STORAGE_KEY);
           localStorage.removeItem(MODEL);
         }}
-        className="mb-4 text-sm text-red-500"
+        className="py-2 px-4 mx-auto mb-2 rounded-lg w-fit text-sm text-red-500 cursor-pointer hover:bg-slate-100"
       >
         Clear Chat
       </button>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto border rounded-lg p-4 space-y-4 mb-4">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-gutter-stable scroll-smooth">
         {messages.map((msg, i) => (
           <div
             key={i}
             className={`p-3 rounded-lg whitespace-pre-wrap ${
-              msg.role === "user"
-                ? "bg-blue-100 ml-auto w-fit"
-                : "bg-gray-100 w-fit"
+              msg.role === "user" && "bg-blue-100 ml-auto w-fit"
             }`}
           >
             <ReactMarkdown
@@ -190,8 +208,9 @@ export default function Home() {
         ))}
       </div>
 
-      <div className="mt-4 flex flex-col gap-2 border rounded-lg p-2">
+      <div className="flex flex-col gap-2 border rounded-lg p-2">
         <textarea
+          ref={textareaRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
@@ -200,7 +219,7 @@ export default function Home() {
               sendMessage();
             }
           }}
-          className="w-full border p-4 rounded-lg"
+          className="w-full border p-4 rounded-lg resize-none"
           rows={1}
           placeholder="Ask something..."
         />
@@ -210,6 +229,7 @@ export default function Home() {
             name="model"
             id="model-select"
             value={model}
+            className="cursor-pointer"
             onChange={(e) => {
               const value = e.target.value;
 
@@ -225,7 +245,7 @@ export default function Home() {
 
           <button
             onClick={() => sendMessage()}
-            className="bg-black text-white px-4 py-2 rounded-lg"
+            className="bg-black text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-slate-800"
             disabled={loading}
           >
             {loading ? "Thinking..." : "Send"}
