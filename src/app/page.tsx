@@ -9,6 +9,7 @@ import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 import { useState, useEffect, useRef } from "react";
 import { Header } from "@/components/Header";
+import { ClearChatButton } from "@/components/ClearChatButton";
 
 type Message = {
   role: "user" | "assistant";
@@ -162,22 +163,19 @@ export default function Home() {
     sendMessage();
   }
 
+  function clearChat() {
+    setMessages([]);
+    setModel("phi3");
+
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(MODEL);
+  }
+
   return (
     <main className="w-3xl mx-auto p-6 h-screen flex flex-col">
       <Header />
 
-      <button
-        onClick={() => {
-          setMessages([]);
-          setModel("phi3");
-
-          localStorage.removeItem(STORAGE_KEY);
-          localStorage.removeItem(MODEL);
-        }}
-        className="py-2 px-4 mx-auto mb-2 rounded-lg w-fit text-sm text-red-500 cursor-pointer hover:bg-slate-100"
-      >
-        Clear Chat
-      </button>
+      <ClearChatButton clearChat={clearChat} />
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-gutter-stable scroll-smooth">
         {messages.map((msg, i) => (
