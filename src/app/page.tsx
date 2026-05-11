@@ -107,7 +107,10 @@ export default function Home() {
       });
 
       if (!res.ok) {
-        throw new Error("Failed to send message");
+        const details = await res.text().catch(() => "");
+        throw new Error(
+          `Failed to send message (${res.status}): ${details || res.statusText}`
+        );
       }
 
       const reader = res.body?.getReader();
@@ -151,6 +154,11 @@ export default function Home() {
     } finally {
       setLoading(false);
     }
+  }
+
+  function handleSubmit(e: React.SubmitEvent) {
+    e.preventDefault();
+    sendMessage();
   }
 
   return (
@@ -208,7 +216,10 @@ export default function Home() {
         ))}
       </div>
 
-      <div className="flex flex-col gap-2 border rounded-lg p-2">
+      <form
+        onSubmit={(e) => handleSubmit(e)}
+        className="flex flex-col gap-2 border rounded-lg p-2"
+      >
         <textarea
           ref={textareaRef}
           value={input}
@@ -244,14 +255,14 @@ export default function Home() {
           </select>
 
           <button
-            onClick={() => sendMessage()}
+            type="submit"
             className="bg-black text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-slate-800"
             disabled={loading}
           >
             {loading ? "Thinking..." : "Send"}
           </button>
         </div>
-      </div>
+      </form>
     </main>
   );
 }
