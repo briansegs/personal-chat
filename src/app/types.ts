@@ -3,4 +3,6 @@ export type Message = {
   content: string;
 };
 
-export type Model = "phi3" | "llama3.1" | "qwen2.5-coder";
+export const MODELS = ["phi3", "llama3.1", "qwen2.5-coder"] as const;
+
+export type Model = (typeof MODELS)[number];

@@ -1,7 +1,5 @@
-import { Model } from "@/app/types";
-
-const validModels: Model[] = ["phi3", "llama3.1", "qwen2.5-coder"];
+import { MODELS, Model } from "@/app/types";
 
 export function isModel(value: string): value is Model {
-  return validModels.includes(value as Model);
+  return (MODELS as readonly string[]).includes(value);
 }
