@@ -8,7 +8,7 @@ export function updateAssistantMessage(messages: Message[], content: string) {
   if (lastMessage?.role === "assistant") {
     copy[copy.length - 1] = {
       role: "assistant",
-      content,
+      content: `${lastMessage.content}${content}`,
     };
   } else {
     copy.push({
