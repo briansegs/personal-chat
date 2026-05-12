@@ -20,7 +20,7 @@ const modelOptions = [
     value: "qwen2.5-coder",
     name: "qwen2.5-coder | coding",
   },
-];
+] as const;
 
 export function ModelSelect({ setModel, model }: ModelSelectProps) {
   return (
@@ -37,7 +37,7 @@ export function ModelSelect({ setModel, model }: ModelSelectProps) {
         }
       }}
     >
-      {modelOptions.map(({ value, name }) => (
+      {[...modelOptions].map(({ value, name }) => (
         <option key={value} value={value}>
           {name}
         </option>
