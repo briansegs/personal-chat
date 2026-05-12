@@ -15,9 +15,8 @@ export default function Home() {
     messages,
     model,
     setModel,
+    sendMessage,
     clearChat,
-    handleSubmit,
-    triggerSendMessage,
   } = useChat();
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -36,6 +35,18 @@ export default function Home() {
     textarea.style.overflowY =
       textarea.scrollHeight > maxHeight ? "auto" : "hidden";
   }, [input]);
+
+  function handleSubmit(e: React.SubmitEvent) {
+    e.preventDefault();
+    sendMessage();
+  }
+
+  function triggerSendMessage(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey && !loading) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
 
   return (
     <main className="w-3xl mx-auto p-6 h-screen flex flex-col">

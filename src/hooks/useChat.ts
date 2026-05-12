@@ -108,18 +108,6 @@ export function useChat() {
     setModel("phi3");
   }
 
-  function handleSubmit(e: React.SubmitEvent) {
-    e.preventDefault();
-    sendMessage();
-  }
-
-  function triggerSendMessage(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey && !loading) {
-      e.preventDefault();
-      sendMessage();
-    }
-  }
-
   return {
     input,
     setInput,
@@ -127,8 +115,7 @@ export function useChat() {
     messages,
     model,
     setModel,
+    sendMessage,
     clearChat,
-    handleSubmit,
-    triggerSendMessage,
   };
 }
