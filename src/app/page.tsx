@@ -3,19 +3,13 @@
 import { useState, useEffect, useRef } from "react";
 import { Header } from "@/components/Header";
 import { ClearChatButton } from "@/components/ClearChatButton";
-import { Message } from "./types";
+import { Message, Model } from "./types";
 import { MessagesContainer } from "@/components/MessagesContainer";
+import { InputContainer } from "@/components/InputContainer";
+import { isModel } from "@/util/isModel";
 
-type Model = "phi3" | "llama3.1" | "qwen2.5-coder";
-
-const validModels: Model[] = ["phi3", "llama3.1", "qwen2.5-coder"];
-
-function isModel(value: string): value is Model {
-  return validModels.includes(value as Model);
-}
-
-const STORAGE_KEY = "local-chat-messages";
-const MODEL = "local-chat-model";
+const MESSAGES_KEY = "local-chat-messages";
+const MODEL_KEY = "local-chat-model";
 
 export default function Home() {
   const [input, setInput] = useState("");
@@ -25,7 +19,7 @@ export default function Home() {
       return "phi3";
     }
 
-    const saved = localStorage.getItem(MODEL);
+    const saved = localStorage.getItem(MODEL_KEY);
 
     return saved && isModel(saved) ? saved : "phi3";
   });
@@ -34,7 +28,7 @@ export default function Home() {
       return [];
     }
 
-    const saved = localStorage.getItem(STORAGE_KEY);
+    const saved = localStorage.getItem(MESSAGES_KEY);
 
     return saved ? JSON.parse(saved) : [];
   });
@@ -57,7 +51,7 @@ export default function Home() {
   }, [input]);
 
   useEffect(() => {
-    localStorage.setItem(MODEL, model);
+    localStorage.setItem(MODEL_KEY, model);
   }, [model]);
 
   useEffect(() => {
@@ -68,7 +62,7 @@ export default function Home() {
       return true;
     });
 
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered));
+    localStorage.setItem(MESSAGES_KEY, JSON.stringify(filtered));
   }, [messages]);
 
   async function sendMessage() {
@@ -157,8 +151,15 @@ export default function Home() {
     setMessages([]);
     setModel("phi3");
 
-    localStorage.removeItem(STORAGE_KEY);
-    localStorage.removeItem(MODEL);
+    localStorage.removeItem(MESSAGES_KEY);
+    localStorage.removeItem(MODEL_KEY);
+  }
+
+  function triggerSendMessage(e: React.KeyboardEvent) {
+    if (e.key === "Enter" && !e.shiftKey && !loading) {
+      e.preventDefault();
+      sendMessage();
+    }
   }
 
   return (
@@ -169,53 +170,14 @@ export default function Home() {
 
       <MessagesContainer messages={messages} />
 
-      <form
-        onSubmit={(e) => handleSubmit(e)}
-        className="flex flex-col gap-2 border rounded-lg p-2"
-      >
-        <textarea
-          ref={textareaRef}
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && !loading) {
-              e.preventDefault();
-              sendMessage();
-            }
-          }}
-          className="w-full border p-4 rounded-lg resize-none"
-          rows={1}
-          placeholder="Ask something..."
-        />
-
-        <div className="flex items-center justify-between">
-          <select
-            name="model"
-            id="model-select"
-            value={model}
-            className="cursor-pointer"
-            onChange={(e) => {
-              const value = e.target.value;
-
-              if (isModel(value)) {
-                setModel(value);
-              }
-            }}
-          >
-            <option value="phi3">phi3</option>
-            <option value="llama3.1">llama3.1</option>
-            <option value="qwen2.5-coder">qwen2.5-coder</option>
-          </select>
-
-          <button
-            type="submit"
-            className="bg-black text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-slate-800"
-            disabled={loading}
-          >
-            {loading ? "Thinking..." : "Send"}
-          </button>
-        </div>
-      </form>
+      <InputContainer
+        handleSubmit={handleSubmit}
+        textareaRef={textareaRef}
+        input={input}
+        setInput={setInput}
+        loading={loading}
+        triggerSendMessage={triggerSendMessage}
+      />
     </main>
   );
 }
