@@ -38,9 +38,11 @@ export async function readChatStream(
 
   buffer += decoder.decode();
 
-  if (buffer.trim()) {
+  const finalChunk = buffer.trim();
+
+  if (finalChunk) {
     try {
-      const json = JSON.parse(buffer);
+      const json = JSON.parse(finalChunk);
 
       const content = json.message?.content;
 
