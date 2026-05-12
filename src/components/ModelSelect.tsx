@@ -10,15 +10,15 @@ type ModelSelectProps = {
 const modelOptions = [
   {
     value: "phi3",
-    name: "phi3 | Basic / fast",
+    name: "phi3 | basic / fast",
   },
   {
     value: "llama3.1",
-    name: "llama3.1 | Smarter / slower",
+    name: "llama3.1 | smarter / slower",
   },
   {
     value: "qwen2.5-coder",
-    name: "qwen2.5-coder | Coding",
+    name: "qwen2.5-coder | coding",
   },
 ];
 

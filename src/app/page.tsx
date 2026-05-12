@@ -6,7 +6,7 @@ import { ClearChatButton } from "@/components/ClearChatButton";
 import { Message, Model } from "./types";
 import { MessagesContainer } from "@/components/MessagesContainer";
 import { InputContainer } from "@/components/InputContainer";
-import { isModel } from "@/util/isModel";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 const MESSAGES_KEY = "local-chat-messages";
 const MODEL_KEY = "local-chat-model";
@@ -14,24 +14,8 @@ const MODEL_KEY = "local-chat-model";
 export default function Home() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [model, setModel] = useState<Model>(() => {
-    if (typeof window === "undefined") {
-      return "phi3";
-    }
-
-    const saved = localStorage.getItem(MODEL_KEY);
-
-    return saved && isModel(saved) ? saved : "phi3";
-  });
-  const [messages, setMessages] = useState<Message[]>(() => {
-    if (typeof window === "undefined") {
-      return [];
-    }
-
-    const saved = localStorage.getItem(MESSAGES_KEY);
-
-    return saved ? JSON.parse(saved) : [];
-  });
+  const [model, setModel] = useLocalStorage<Model>(MODEL_KEY, "phi3");
+  const [messages, setMessages] = useLocalStorage<Message[]>(MESSAGES_KEY, []);
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
 
@@ -50,91 +34,91 @@ export default function Home() {
       textarea.scrollHeight > maxHeight ? "auto" : "hidden";
   }, [input]);
 
-  useEffect(() => {
-    localStorage.setItem(MODEL_KEY, model);
-  }, [model]);
-
-  useEffect(() => {
-    const filtered = messages.filter((m) => {
-      if (m.role === "assistant" && m.content.trim() === "") {
-        return false;
-      }
-      return true;
+  async function sendToApi(nextMessages: Message[]) {
+    const res = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        model,
+        messages: nextMessages,
+      }),
     });
 
-    localStorage.setItem(MESSAGES_KEY, JSON.stringify(filtered));
-  }, [messages]);
+    if (!res.ok) {
+      const details = await res.text().catch(() => "");
+      throw new Error(
+        `Failed to send message (${res.status}): ${details || res.statusText}`
+      );
+    }
+
+    const reader = res.body?.getReader();
+    const decoder = new TextDecoder();
+
+    let assistantText = "";
+
+    if (!reader) return;
+
+    while (true) {
+      const { value, done } = await reader.read();
+
+      if (done) break;
+
+      const chunk = decoder.decode(value);
+      const lines = chunk.split("\n").filter(Boolean);
+
+      for (const line of lines) {
+        try {
+          const json = JSON.parse(line);
+          const content = json.message?.content;
+
+          if (!content) continue;
+
+          assistantText += content;
+
+          setMessages((prev) => {
+            const copy = [...prev];
+
+            const lastMessage = copy[copy.length - 1];
+
+            if (lastMessage?.role === "assistant") {
+              copy[copy.length - 1] = {
+                role: "assistant",
+                content: assistantText,
+              };
+            } else {
+              copy.push({
+                role: "assistant",
+                content: assistantText,
+              });
+            }
+
+            return copy;
+          });
+        } catch {}
+      }
+    }
+  }
 
   async function sendMessage() {
     if (!input.trim() || loading) return;
 
+    const userMessage: Message = {
+      role: "user",
+      content: input,
+    };
+
+    setInput("");
+    setLoading(true);
+
+    const nextMessages = (() => {
+      const base = messages;
+      return [...base, userMessage];
+    })();
+
+    setMessages(nextMessages);
+
     try {
-      setLoading(true);
-
-      const userMessage: Message = {
-        role: "user",
-        content: input,
-      };
-
-      const updatedMessages = [...messages, userMessage];
-
-      setMessages((prev) => [...prev, userMessage]);
-      setInput("");
-
-      const res = await fetch("/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model,
-          messages: updatedMessages,
-        }),
-      });
-
-      if (!res.ok) {
-        const details = await res.text().catch(() => "");
-        throw new Error(
-          `Failed to send message (${res.status}): ${details || res.statusText}`
-        );
-      }
-
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-
-      let assistantText = "";
-
-      setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
-
-      if (!reader) return;
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        const chunk = decoder.decode(value);
-        const lines = chunk.split("\n").filter(Boolean);
-
-        for (const line of lines) {
-          try {
-            const json = JSON.parse(line);
-            const content = json.message?.content;
-
-            if (content) {
-              assistantText += content;
-
-              setMessages((prev) => {
-                const copy = [...prev];
-                copy[copy.length - 1] = {
-                  role: "assistant",
-                  content: assistantText,
-                };
-                return copy;
-              });
-            }
-          } catch {}
-        }
-      }
+      await sendToApi(nextMessages);
     } catch (error) {
       console.error(error);
     } finally {
@@ -150,9 +134,6 @@ export default function Home() {
   function clearChat() {
     setMessages([]);
     setModel("phi3");
-
-    localStorage.removeItem(MESSAGES_KEY);
-    localStorage.removeItem(MODEL_KEY);
   }
 
   function triggerSendMessage(e: React.KeyboardEvent) {
@@ -177,6 +158,8 @@ export default function Home() {
         setInput={setInput}
         loading={loading}
         triggerSendMessage={triggerSendMessage}
+        model={model}
+        setModel={setModel}
       />
     </main>
   );
