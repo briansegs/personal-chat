@@ -31,17 +31,44 @@ export function useChat() {
     const reader = res.body?.getReader();
     const decoder = new TextDecoder();
 
+    let buffer = "";
+
     let assistantText = "";
 
     if (!reader) return;
+
+    function updateAssistantMessage(content: string) {
+      assistantText += content;
+
+      setMessages((prev) => {
+        const copy = [...prev];
+
+        const lastMessage = copy[copy.length - 1];
+
+        if (lastMessage?.role === "assistant") {
+          copy[copy.length - 1] = {
+            role: "assistant",
+            content: assistantText,
+          };
+        } else {
+          copy.push({
+            role: "assistant",
+            content: assistantText,
+          });
+        }
+
+        return copy;
+      });
+    }
 
     while (true) {
       const { value, done } = await reader.read();
 
       if (done) break;
 
-      const chunk = decoder.decode(value);
-      const lines = chunk.split("\n").filter(Boolean);
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split("\n");
+      buffer = lines.pop() ?? "";
 
       for (const line of lines) {
         try {
@@ -50,28 +77,25 @@ export function useChat() {
 
           if (!content) continue;
 
-          assistantText += content;
+          updateAssistantMessage(content);
+        } catch (error) {
+          console.error("Failed to parse stream chunk:", error);
+        }
+      }
+    }
 
-          setMessages((prev) => {
-            const copy = [...prev];
+    buffer += decoder.decode();
 
-            const lastMessage = copy[copy.length - 1];
+    if (buffer.trim()) {
+      try {
+        const json = JSON.parse(buffer);
+        const content = json.message?.content;
 
-            if (lastMessage?.role === "assistant") {
-              copy[copy.length - 1] = {
-                role: "assistant",
-                content: assistantText,
-              };
-            } else {
-              copy.push({
-                role: "assistant",
-                content: assistantText,
-              });
-            }
-
-            return copy;
-          });
-        } catch {}
+        if (content) {
+          updateAssistantMessage(content);
+        }
+      } catch (error) {
+        console.error("Failed to parse final stream chunk:", error);
       }
     }
   }
@@ -87,10 +111,7 @@ export function useChat() {
     setInput("");
     setLoading(true);
 
-    const nextMessages = (() => {
-      const base = messages;
-      return [...base, userMessage];
-    })();
+    const nextMessages = [...messages, userMessage];
 
     setMessages(nextMessages);
 
