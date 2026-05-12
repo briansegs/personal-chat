@@ -17,7 +17,7 @@ export function MessagesContainer({ messages }: MessagesContainerProps) {
         <div
           key={i}
           className={`p-3 rounded-lg whitespace-pre-wrap ${
-            msg.role === "user" && "bg-blue-100 ml-auto w-fit"
+            msg.role === "user" ? "bg-blue-100 ml-auto w-fit" : ""
           }`}
         >
           <ReactMarkdown
