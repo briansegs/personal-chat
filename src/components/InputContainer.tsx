@@ -26,7 +26,7 @@ export function InputContainer({
 }: InputContainerProps) {
   return (
     <form
-      onSubmit={(e) => handleSubmit(e)}
+      onSubmit={handleSubmit}
       className="flex flex-col gap-2 border rounded-lg p-2"
     >
       <textarea
