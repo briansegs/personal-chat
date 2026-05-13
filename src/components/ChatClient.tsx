@@ -24,6 +24,7 @@ export default function ChatClient() {
     activeSessionId,
     setActiveSessionId,
     createNewSession,
+    deleteSession,
   } = useChat();
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -63,6 +64,7 @@ export default function ChatClient() {
           activeSessionId={activeSessionId}
           setActiveSessionId={setActiveSessionId}
           createNewSession={createNewSession}
+          deleteSession={deleteSession}
         />
         <div className="absolute z-50 bg-sidebar">
           <SidebarTrigger size="icon-lg" />

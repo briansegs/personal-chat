@@ -181,6 +181,12 @@ export function useChat() {
     }
   }
 
+  function generateSessionTitle(content: string) {
+    return content.length > 40
+      ? content.slice(0, 40).trim() + "..."
+      : content.trim();
+  }
+
   async function sendMessage() {
     if (!input.trim() || loading || !activeSessionId) return;
 
@@ -194,10 +200,19 @@ export function useChat() {
 
     const nextMessages = [...messages, userMessage];
 
-    updateSession(activeSessionId, (session) => ({
-      ...session,
-      messages: nextMessages,
-    }));
+    updateSession(activeSessionId, (session) => {
+      const isNewChatTitle = session.title === "New Chat" || !session.title;
+
+      return {
+        ...session,
+        title: isNewChatTitle
+          ? generateSessionTitle(
+              userMessage.content.replace(/[?.!]/g, "").slice(0, 20).trim()
+            )
+          : session.title,
+        messages: nextMessages,
+      };
+    });
 
     try {
       await sendToApi(nextMessages, activeSessionId, model);
@@ -234,6 +249,24 @@ export function useChat() {
     setLoading(false);
   }
 
+  function deleteSession(sessionId: string) {
+    setSessions((prev) => {
+      const updated = prev.filter((s) => s.id !== sessionId);
+
+      if (activeSessionId === sessionId) {
+        const nextActive = updated[0];
+
+        if (nextActive) {
+          setActiveSessionId(nextActive.id);
+        } else {
+          setActiveSessionId(null);
+        }
+      }
+
+      return updated;
+    });
+  }
+
   return {
     input,
     setInput,
@@ -249,5 +282,6 @@ export function useChat() {
     activeSessionId,
     setActiveSessionId,
     createNewSession,
+    deleteSession,
   };
 }

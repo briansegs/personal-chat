@@ -9,11 +9,14 @@ import { Button } from "./ui/button";
 import { PlusIcon } from "@phosphor-icons/react";
 import { Separator } from "./ui/separator";
 
+import { DeleteChatDialog } from "./DeleteChatDialog";
+
 type ChatSidebarProps = {
   sessions: ChatSession[];
   activeSessionId: string | null;
   setActiveSessionId: (id: string) => void;
   createNewSession: () => void;
+  deleteSession: (id: string) => void;
 };
 
 export function ChatSidebar({
@@ -21,6 +24,7 @@ export function ChatSidebar({
   activeSessionId,
   setActiveSessionId,
   createNewSession,
+  deleteSession,
 }: ChatSidebarProps) {
   return (
     <Sidebar>
@@ -35,18 +39,27 @@ export function ChatSidebar({
         <SidebarGroup>
           <div className="flex flex-col gap-1">
             {sessions.map((session) => (
-              <Button
+              <div
                 key={session.id}
-                onClick={() => setActiveSessionId(session.id)}
-                variant="secondary"
-                className={`text-left p-2 rounded-lg ${
-                  session.id === activeSessionId
-                    ? "bg-muted-foreground/50 hover:bg-muted-foreground/30"
-                    : "hover:bg-secondary/50"
-                }`}
+                className="flex items-center justify-between gap-1"
               >
-                {session.title}
-              </Button>
+                <Button
+                  onClick={() => setActiveSessionId(session.id)}
+                  variant="outline"
+                  className={`text-left p-2 rounded-lg w-48 min-w-0 truncate flex-1 ${
+                    session.id === activeSessionId
+                      ? "bg-muted-foreground/40 hover:bg-muted-foreground/30"
+                      : "hover:bg-secondary/50"
+                  }`}
+                >
+                  {session.title}
+                </Button>
+
+                <DeleteChatDialog
+                  deleteSession={deleteSession}
+                  session={session}
+                />
+              </div>
             ))}
           </div>
         </SidebarGroup>
