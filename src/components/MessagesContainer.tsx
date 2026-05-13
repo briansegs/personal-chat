@@ -6,13 +6,16 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Message } from "@/app/types";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { ReturnToBottomButton } from "./ReturnToBottomButton";
 
 type MessagesContainerProps = {
   messages: Message[];
 };
 
 export function MessagesContainer({ messages }: MessagesContainerProps) {
+  const [showNewMessages, setShowNewMessages] = useState(false);
+
   const containerRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
   const shouldAutoScroll = useRef(true);
@@ -21,13 +24,23 @@ export function MessagesContainer({ messages }: MessagesContainerProps) {
     const el = containerRef.current;
     if (!el) return;
 
-    const threshold = 120;
-
     const handleScroll = () => {
+      const el = containerRef.current;
+      if (!el) return;
+
+      const threshold = 120;
+
       const distanceFromBottom =
         el.scrollHeight - el.scrollTop - el.clientHeight;
 
-      shouldAutoScroll.current = distanceFromBottom < threshold;
+      const isNearBottom = distanceFromBottom < threshold;
+
+      shouldAutoScroll.current = isNearBottom;
+
+      setShowNewMessages((prev) => {
+        if (prev === !isNearBottom) return prev;
+        return !isNearBottom;
+      });
     };
 
     el.addEventListener("scroll", handleScroll);
@@ -36,20 +49,33 @@ export function MessagesContainer({ messages }: MessagesContainerProps) {
   }, []);
 
   useEffect(() => {
-    const isStreaming = messages[messages.length - 1]?.role === "assistant";
-
     if (!shouldAutoScroll.current) return;
+
+    const isStreaming = messages[messages.length - 1]?.role === "assistant";
 
     bottomRef.current?.scrollIntoView({
       behavior: isStreaming ? "auto" : "smooth",
     });
   }, [messages]);
 
+  function scrollToBottom() {
+    bottomRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+
+    shouldAutoScroll.current = true;
+    setShowNewMessages(false);
+  }
+
   return (
     <div
       ref={containerRef}
       className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-gutter-stable overscroll-contain"
     >
+      {showNewMessages && (
+        <ReturnToBottomButton scrollToBottom={scrollToBottom} />
+      )}
+
       {messages.map((msg, i) => (
         <div
           key={i}
