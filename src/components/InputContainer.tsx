@@ -30,7 +30,7 @@ export function InputContainer({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-2 border rounded-lg p-2 relative"
+      className="flex flex-col gap-2 border p-2 relative bg-card shadow"
     >
       {loading && <StatusMessage />}
 
@@ -39,7 +39,7 @@ export function InputContainer({
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => triggerSendMessage(e)}
-        className="w-full border p-4 rounded-lg resize-none"
+        className="w-full border p-4 resize-none"
         rows={1}
         placeholder="Ask something..."
       />

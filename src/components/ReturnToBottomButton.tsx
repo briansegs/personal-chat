@@ -1,4 +1,5 @@
 import { ArrowDownIcon } from "@phosphor-icons/react";
+import { Button } from "./ui/button";
 
 type ReturnToBottomButtonProps = {
   scrollToBottom: () => void;
@@ -8,13 +9,14 @@ export function ReturnToBottomButton({
   scrollToBottom,
 }: ReturnToBottomButtonProps) {
   return (
-    <button
+    <Button
       type="button"
       aria-label="Scroll to latest messages"
       onClick={scrollToBottom}
-      className="sticky cursor-pointer border hover:bg-slate-800 top-0 mx-auto border-black block bg-black text-white text-sm px-3 py-3 rounded-full shadow-md hover:opacity-90 backdrop-blur"
+      className="sticky top-0 left-1/2 -translate-x-1/2"
+      size="icon"
     >
       <ArrowDownIcon weight="fill" size={24} />
-    </button>
+    </Button>
   );
 }

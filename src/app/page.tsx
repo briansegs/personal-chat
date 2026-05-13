@@ -50,10 +50,12 @@ export default function Home() {
   }
 
   return (
-    <main className="w-3xl mx-auto p-6 h-screen flex flex-col">
+    <main className="w-3xl mx-auto p-6 h-screen flex flex-col bg-background">
       <Header />
 
-      <ClearChatButton clearChat={clearChat} />
+      <div className="flex justify-center pb-2">
+        <ClearChatButton clearChat={clearChat} />
+      </div>
 
       <MessagesContainer messages={messages} />
 

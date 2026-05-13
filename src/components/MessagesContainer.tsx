@@ -79,8 +79,10 @@ export function MessagesContainer({ messages }: MessagesContainerProps) {
       {messages.map((msg, i) => (
         <div
           key={i}
-          className={`p-3 rounded-lg whitespace-pre-wrap ${
-            msg.role === "user" ? "bg-blue-100 ml-auto w-fit" : ""
+          className={`p-3 rounded-lg whitespace-pre-wrap  ${
+            msg.role === "user"
+              ? "bg-secondary text-foreground ml-auto w-fit"
+              : "text-muted-foreground"
           }`}
         >
           <ReactMarkdown
