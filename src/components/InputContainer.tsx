@@ -29,8 +29,14 @@ export function InputContainer({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-2 border rounded-lg p-2"
+      className="flex flex-col gap-2 border rounded-lg p-2 relative"
     >
+      {loading && (
+        <div className="px-3 border rounded-lg absolute -top-8 left-1/2 -translate-x-1/2 text-slate-400 border-slate-300">
+          Generating response...
+        </div>
+      )}
+
       <textarea
         ref={textareaRef}
         value={input}
