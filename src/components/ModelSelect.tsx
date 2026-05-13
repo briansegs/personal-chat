@@ -1,6 +1,5 @@
 import { Model } from "@/app/types";
 import { isModel } from "@/util/isModel";
-import { Dispatch, SetStateAction } from "react";
 import {
   Select,
   SelectContent,
@@ -14,7 +13,7 @@ import {
 
 type ModelSelectProps = {
   model: Model;
-  setModel: Dispatch<SetStateAction<Model>>;
+  setModel: (model: Model) => void;
 };
 
 const generalOptions = [

@@ -6,6 +6,8 @@ import { ClearChatButton } from "@/components/ClearChatButton";
 import { MessagesContainer } from "@/components/MessagesContainer";
 import { InputContainer } from "@/components/InputContainer";
 import { useChat } from "@/hooks/useChat";
+import { SidebarProvider, SidebarTrigger } from "./ui/sidebar";
+import { ChatSidebar } from "./ChatSidebar";
 
 export default function ChatClient() {
   const {
@@ -18,6 +20,10 @@ export default function ChatClient() {
     sendMessage,
     clearChat,
     stopGenerating,
+    sessions,
+    activeSessionId,
+    setActiveSessionId,
+    createNewSession,
   } = useChat();
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -50,26 +56,40 @@ export default function ChatClient() {
   }
 
   return (
-    <main className="w-3xl mx-auto p-6 h-screen flex flex-col bg-background">
-      <Header />
+    <SidebarProvider>
+      <div className="w-full relative">
+        <ChatSidebar
+          sessions={sessions}
+          activeSessionId={activeSessionId}
+          setActiveSessionId={setActiveSessionId}
+          createNewSession={createNewSession}
+        />
+        <div className="absolute z-50 bg-sidebar">
+          <SidebarTrigger size="icon-lg" />
+        </div>
 
-      <div className="flex justify-center pb-2">
-        <ClearChatButton clearChat={clearChat} />
+        <main className="w-3xl mx-auto p-6 h-screen flex flex-col bg-background">
+          <Header />
+
+          <div className="flex justify-center pb-2">
+            <ClearChatButton clearChat={clearChat} />
+          </div>
+
+          <MessagesContainer messages={messages} />
+
+          <InputContainer
+            handleSubmit={handleSubmit}
+            textareaRef={textareaRef}
+            input={input}
+            setInput={setInput}
+            loading={loading}
+            triggerSendMessage={triggerSendMessage}
+            model={model}
+            setModel={setModel}
+            stopGenerating={stopGenerating}
+          />
+        </main>
       </div>
-
-      <MessagesContainer messages={messages} />
-
-      <InputContainer
-        handleSubmit={handleSubmit}
-        textareaRef={textareaRef}
-        input={input}
-        setInput={setInput}
-        loading={loading}
-        triggerSendMessage={triggerSendMessage}
-        model={model}
-        setModel={setModel}
-        stopGenerating={stopGenerating}
-      />
-    </main>
+    </SidebarProvider>
   );
 }
