@@ -12,6 +12,7 @@ type InputContainerProps = {
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   model: Model;
   setModel: Dispatch<SetStateAction<Model>>;
+  stopGenerating: () => void;
 };
 
 export function InputContainer({
@@ -23,12 +24,22 @@ export function InputContainer({
   triggerSendMessage,
   model,
   setModel,
+  stopGenerating,
 }: InputContainerProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-2 border rounded-lg p-2"
+      className="flex flex-col gap-2 border rounded-lg p-2 relative"
     >
+      {true && (
+        <div className="px-3 items-baseline flex gap-1 border rounded-lg absolute -top-8 left-1/2 -translate-x-1/2 text-slate-400 border-slate-300">
+          <span>Generating response</span>
+          <span className="h-1 w-1 rounded-full bg-slate-300 animate-bounce" />
+          <span className="h-1 w-1 rounded-full bg-slate-300 animate-bounce [animation-delay:0.15s]" />
+          <span className="h-1 w-1 rounded-full bg-slate-300 animate-bounce [animation-delay:0.3s]" />
+        </div>
+      )}
+
       <textarea
         ref={textareaRef}
         value={input}
@@ -42,7 +53,10 @@ export function InputContainer({
       <div className="flex items-center justify-between">
         <ModelSelect model={model} setModel={setModel} />
 
-        <MessageSubmitButton loading={loading} />
+        <MessageSubmitButton
+          loading={loading}
+          stopGenerating={stopGenerating}
+        />
       </div>
     </form>
   );

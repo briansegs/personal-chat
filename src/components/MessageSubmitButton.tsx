@@ -1,15 +1,19 @@
 type MessageSubmitButtonProps = {
   loading: boolean;
+  stopGenerating: () => void;
 };
 
-export function MessageSubmitButton({ loading }: MessageSubmitButtonProps) {
+export function MessageSubmitButton({
+  loading,
+  stopGenerating,
+}: MessageSubmitButtonProps) {
   return (
     <button
-      type="submit"
+      type={loading ? "button" : "submit"}
+      onClick={loading ? stopGenerating : undefined}
       className="bg-black text-white px-4 py-2 rounded-lg cursor-pointer hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:bg-black"
-      disabled={loading}
     >
-      {loading ? "Thinking..." : "Send"}
+      {loading ? "Stop" : "Send"}
     </button>
   );
 }
