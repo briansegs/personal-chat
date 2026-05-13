@@ -70,7 +70,7 @@ export function MessagesContainer({ messages }: MessagesContainerProps) {
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-gutter-stable overscroll-contain scroll-smooth"
+      className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-gutter-stable overscroll-contain"
     >
       {showNewMessages && (
         <ReturnToBottomButton scrollToBottom={scrollToBottom} />

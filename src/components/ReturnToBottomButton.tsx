@@ -9,6 +9,8 @@ export function ReturnToBottomButton({
 }: ReturnToBottomButtonProps) {
   return (
     <button
+      type="button"
+      aria-label="Scroll to latest messages"
       onClick={scrollToBottom}
       className="sticky cursor-pointer border hover:bg-slate-800 top-0 mx-auto border-black block bg-black text-white text-sm px-3 py-3 rounded-full shadow-md hover:opacity-90 backdrop-blur"
     >
