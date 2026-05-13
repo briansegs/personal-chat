@@ -2,6 +2,7 @@ import { Model } from "@/app/types";
 import React, { Dispatch, RefObject, SetStateAction } from "react";
 import { MessageSubmitButton } from "./MessageSubmitButton";
 import { ModelSelect } from "./ModelSelect";
+import { StatusMessage } from "./StatusMessage";
 
 type InputContainerProps = {
   handleSubmit: (e: React.SubmitEvent<HTMLFormElement>) => void;
@@ -31,14 +32,7 @@ export function InputContainer({
       onSubmit={handleSubmit}
       className="flex flex-col gap-2 border rounded-lg p-2 relative"
     >
-      {true && (
-        <div className="px-3 items-baseline flex gap-1 border rounded-lg absolute -top-8 left-1/2 -translate-x-1/2 text-slate-400 border-slate-300">
-          <span>Generating response</span>
-          <span className="h-1 w-1 rounded-full bg-slate-300 animate-bounce" />
-          <span className="h-1 w-1 rounded-full bg-slate-300 animate-bounce [animation-delay:0.15s]" />
-          <span className="h-1 w-1 rounded-full bg-slate-300 animate-bounce [animation-delay:0.3s]" />
-        </div>
-      )}
+      {loading && <StatusMessage />}
 
       <textarea
         ref={textareaRef}
