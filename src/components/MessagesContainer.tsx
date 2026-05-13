@@ -6,13 +6,50 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Message } from "@/app/types";
 
+import { useEffect, useRef } from "react";
+
 type MessagesContainerProps = {
   messages: Message[];
 };
 
 export function MessagesContainer({ messages }: MessagesContainerProps) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const bottomRef = useRef<HTMLDivElement | null>(null);
+  const shouldAutoScroll = useRef(true);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+
+    const threshold = 120;
+
+    const handleScroll = () => {
+      const distanceFromBottom =
+        el.scrollHeight - el.scrollTop - el.clientHeight;
+
+      shouldAutoScroll.current = distanceFromBottom < threshold;
+    };
+
+    el.addEventListener("scroll", handleScroll);
+
+    return () => el.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    const isStreaming = messages[messages.length - 1]?.role === "assistant";
+
+    if (!shouldAutoScroll.current) return;
+
+    bottomRef.current?.scrollIntoView({
+      behavior: isStreaming ? "auto" : "smooth",
+    });
+  }, [messages]);
+
   return (
-    <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-gutter-stable scroll-smooth">
+    <div
+      ref={containerRef}
+      className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-gutter-stable overscroll-contain"
+    >
       {messages.map((msg, i) => (
         <div
           key={i}
@@ -48,6 +85,8 @@ export function MessagesContainer({ messages }: MessagesContainerProps) {
           </ReactMarkdown>
         </div>
       ))}
+
+      <div ref={bottomRef} />
     </div>
   );
 }
