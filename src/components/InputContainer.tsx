@@ -3,6 +3,7 @@ import React, { Dispatch, RefObject, SetStateAction } from "react";
 import { MessageSubmitButton } from "./MessageSubmitButton";
 import { ModelSelect } from "./ModelSelect";
 import { StatusMessage } from "./StatusMessage";
+import { Textarea } from "./ui/textarea";
 
 type InputContainerProps = {
   handleSubmit: (e: React.SubmitEvent<HTMLFormElement>) => void;
@@ -34,14 +35,14 @@ export function InputContainer({
     >
       {loading && <StatusMessage />}
 
-      <textarea
+      <Textarea
         ref={textareaRef}
         value={input}
         onChange={(e) => setInput(e.target.value)}
         onKeyDown={(e) => triggerSendMessage(e)}
-        className="w-full border p-4 resize-none"
-        rows={1}
         placeholder="Ask something..."
+        rows={1}
+        disabled={loading}
       />
 
       <div className="flex items-center justify-between">
