@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { Message, Model } from "@/app/types";
 
@@ -11,10 +11,23 @@ export function useChat() {
   const [model, setModel] = useLocalStorage<Model>(MODEL_KEY, "phi3");
   const [messages, setMessages] = useLocalStorage<Message[]>(MESSAGES_KEY, []);
 
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   async function sendToApi(nextMessages: Message[]) {
+    const controller = new AbortController();
+
+    abortControllerRef.current = controller;
+
     const res = await fetch("/api/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
+      signal: controller.signal,
       body: JSON.stringify({
         model,
         messages: nextMessages,
@@ -118,8 +131,13 @@ export function useChat() {
     try {
       await sendToApi(nextMessages);
     } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        return;
+      }
+
       console.error(error);
     } finally {
+      abortControllerRef.current = null;
       setLoading(false);
     }
   }
@@ -127,6 +145,12 @@ export function useChat() {
   function clearChat() {
     setMessages([]);
     setModel("phi3");
+  }
+
+  function stopGenerating() {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    setLoading(false);
   }
 
   return {
@@ -138,5 +162,6 @@ export function useChat() {
     setModel,
     sendMessage,
     clearChat,
+    stopGenerating,
   };
 }

@@ -12,6 +12,7 @@ type InputContainerProps = {
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   model: Model;
   setModel: Dispatch<SetStateAction<Model>>;
+  stopGenerating: () => void;
 };
 
 export function InputContainer({
@@ -23,6 +24,7 @@ export function InputContainer({
   triggerSendMessage,
   model,
   setModel,
+  stopGenerating,
 }: InputContainerProps) {
   return (
     <form
@@ -42,7 +44,10 @@ export function InputContainer({
       <div className="flex items-center justify-between">
         <ModelSelect model={model} setModel={setModel} />
 
-        <MessageSubmitButton loading={loading} />
+        <MessageSubmitButton
+          loading={loading}
+          stopGenerating={stopGenerating}
+        />
       </div>
     </form>
   );

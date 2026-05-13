@@ -17,6 +17,7 @@ export default function Home() {
     setModel,
     sendMessage,
     clearChat,
+    stopGenerating,
   } = useChat();
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -65,6 +66,7 @@ export default function Home() {
         triggerSendMessage={triggerSendMessage}
         model={model}
         setModel={setModel}
+        stopGenerating={stopGenerating}
       />
     </main>
   );
