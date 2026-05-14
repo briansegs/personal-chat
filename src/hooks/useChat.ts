@@ -4,6 +4,12 @@ import { ChatSession, Message, Model } from "@/app/types";
 
 const SESSION_KEY = "chat-sessions";
 const ACTIVE_SESSION = "active-chat-session";
+const DEFAULT_MODEL: Model = "phi3";
+const DEFAULT_TITLE = "New Chat";
+
+function now() {
+  return new Date().toISOString();
+}
 
 export function useChat() {
   const [input, setInput] = useState("");
@@ -25,7 +31,7 @@ export function useChat() {
 
   const messages = activeSession?.messages ?? [];
 
-  const model = activeSession?.model ?? "phi3";
+  const model = activeSession?.model ?? DEFAULT_MODEL;
 
   function setModel(model: Model) {
     if (!activeSessionId) return;
@@ -39,10 +45,10 @@ export function useChat() {
   const createNewSession = useCallback(() => {
     const newSession: ChatSession = {
       id: crypto.randomUUID(),
-      title: "New Chat",
-      model: "phi3",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      title: DEFAULT_TITLE,
+      model: DEFAULT_MODEL,
+      createdAt: now(),
+      updatedAt: now(),
       messages: [],
     };
 
@@ -86,7 +92,7 @@ export function useChat() {
 
         return {
           ...updater(session),
-          updatedAt: new Date().toISOString(),
+          updatedAt: now(),
         };
       })
     );
@@ -213,7 +219,7 @@ export function useChat() {
     const nextMessages = [...messages, userMessage];
 
     updateSession(activeSessionId, (session) => {
-      const isNewChatTitle = session.title === "New Chat" || !session.title;
+      const isNewChatTitle = session.title === DEFAULT_TITLE || !session.title;
 
       return {
         ...session,
@@ -251,7 +257,7 @@ export function useChat() {
     updateSession(activeSessionId, (session) => ({
       ...session,
       messages: [],
-      updatedAt: new Date().toISOString(),
+      updatedAt: now(),
     }));
   }
 
