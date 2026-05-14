@@ -13,7 +13,7 @@ type InputContainerProps = {
   triggerSendMessage: (e: React.KeyboardEvent) => void;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   model: Model;
-  setModel: Dispatch<SetStateAction<Model>>;
+  setModel: (model: Model) => void;
   stopGenerating: () => void;
 };
 

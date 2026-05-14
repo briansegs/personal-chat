@@ -1,17 +1,54 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { Message, Model } from "@/app/types";
+import { ChatSession, Message, Model } from "@/app/types";
 
-const MESSAGES_KEY = "local-chat-messages";
-const MODEL_KEY = "local-chat-model";
+const SESSION_KEY = "chat-sessions";
+const ACTIVE_SESSION = "active-chat-session";
 
 export function useChat() {
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [model, setModel] = useLocalStorage<Model>(MODEL_KEY, "phi3");
-  const [messages, setMessages] = useLocalStorage<Message[]>(MESSAGES_KEY, []);
+  const [sessions, setSessions] = useLocalStorage<ChatSession[]>(
+    SESSION_KEY,
+    []
+  );
+  const [activeSessionId, setActiveSessionId] = useLocalStorage<string | null>(
+    ACTIVE_SESSION,
+    null
+  );
 
   const abortControllerRef = useRef<AbortController | null>(null);
+
+  const activeSession = sessions.find(
+    (session) => session.id === activeSessionId
+  );
+
+  const messages = activeSession?.messages ?? [];
+
+  const model = activeSession?.model ?? "phi3";
+
+  function setModel(model: Model) {
+    if (!activeSessionId) return;
+
+    updateSession(activeSessionId, (session) => ({
+      ...session,
+      model,
+    }));
+  }
+
+  const createNewSession = useCallback(() => {
+    const newSession: ChatSession = {
+      id: crypto.randomUUID(),
+      title: "New Chat",
+      model: "phi3",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      messages: [],
+    };
+
+    setSessions((prev) => [newSession, ...prev]);
+    setActiveSessionId(newSession.id);
+  }, [setSessions, setActiveSessionId]);
 
   useEffect(() => {
     return () => {
@@ -19,7 +56,47 @@ export function useChat() {
     };
   }, []);
 
-  async function sendToApi(nextMessages: Message[]) {
+  useEffect(() => {
+    if (sessions.length === 0) {
+      if (!activeSessionId) {
+        createNewSession();
+      }
+
+      return;
+    }
+
+    const hasActiveSession = sessions.some(
+      (session) => session.id === activeSessionId
+    );
+
+    if (!hasActiveSession) {
+      setActiveSessionId(sessions[0].id);
+    }
+  }, [sessions, activeSessionId, createNewSession, setActiveSessionId]);
+
+  function updateSession(
+    sessionId: string,
+    updater: (session: ChatSession) => ChatSession
+  ) {
+    setSessions((prev) =>
+      prev.map((session) => {
+        if (session.id !== sessionId) {
+          return session;
+        }
+
+        return {
+          ...updater(session),
+          updatedAt: new Date().toISOString(),
+        };
+      })
+    );
+  }
+
+  async function sendToApi(
+    nextMessages: Message[],
+    sessionId: string,
+    model: Model
+  ) {
     const controller = new AbortController();
 
     abortControllerRef.current = controller;
@@ -53,8 +130,8 @@ export function useChat() {
     function updateAssistantMessage(content: string) {
       assistantText += content;
 
-      setMessages((prev) => {
-        const copy = [...prev];
+      updateSession(sessionId, (session) => {
+        const copy = [...session.messages];
 
         const lastMessage = copy[copy.length - 1];
 
@@ -70,7 +147,10 @@ export function useChat() {
           });
         }
 
-        return copy;
+        return {
+          ...session,
+          messages: copy,
+        };
       });
     }
 
@@ -113,8 +193,14 @@ export function useChat() {
     }
   }
 
+  function generateSessionTitle(content: string) {
+    return content.length > 25
+      ? content.slice(0, 25).trim() + "..."
+      : content.trim();
+  }
+
   async function sendMessage() {
-    if (!input.trim() || loading) return;
+    if (!input.trim() || loading || !activeSessionId) return;
 
     const userMessage: Message = {
       role: "user",
@@ -126,10 +212,22 @@ export function useChat() {
 
     const nextMessages = [...messages, userMessage];
 
-    setMessages(nextMessages);
+    updateSession(activeSessionId, (session) => {
+      const isNewChatTitle = session.title === "New Chat" || !session.title;
+
+      return {
+        ...session,
+        title: isNewChatTitle
+          ? generateSessionTitle(
+              userMessage.content.replace(/[?.!]/g, "").slice(0, 25).trim()
+            )
+          : session.title,
+        messages: nextMessages,
+      };
+    });
 
     try {
-      await sendToApi(nextMessages);
+      await sendToApi(nextMessages, activeSessionId, model);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         return;
@@ -143,14 +241,45 @@ export function useChat() {
   }
 
   function clearChat() {
-    setMessages([]);
-    setModel("phi3");
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+
+    setLoading(false);
+
+    if (!activeSessionId) return;
+
+    updateSession(activeSessionId, (session) => ({
+      ...session,
+      messages: [],
+      updatedAt: new Date().toISOString(),
+    }));
   }
 
   function stopGenerating() {
     abortControllerRef.current?.abort();
     abortControllerRef.current = null;
     setLoading(false);
+  }
+
+  function deleteSession(sessionId: string) {
+    const updated = sessions.filter((session) => session.id !== sessionId);
+
+    setSessions(updated);
+
+    if (activeSessionId === sessionId) {
+      setActiveSessionId(updated[0]?.id ?? null);
+    }
+  }
+
+  function renameSession(sessionId: string, title: string) {
+    const trimmedTitle = title.trim();
+
+    if (!trimmedTitle) return;
+
+    updateSession(sessionId, (session) => ({
+      ...session,
+      title: trimmedTitle,
+    }));
   }
 
   return {
@@ -163,5 +292,12 @@ export function useChat() {
     sendMessage,
     clearChat,
     stopGenerating,
+    sessions,
+    activeSession,
+    activeSessionId,
+    setActiveSessionId,
+    createNewSession,
+    deleteSession,
+    renameSession,
   };
 }
