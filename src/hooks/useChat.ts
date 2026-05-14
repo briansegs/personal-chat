@@ -43,6 +43,20 @@ export function useChat() {
     }));
   }
 
+  function stopActiveRequest() {
+    abortControllerRef.current?.abort();
+  }
+
+  function resetRequestState() {
+    abortControllerRef.current = null;
+    setLoading(false);
+  }
+
+  function cancelRequest() {
+    stopActiveRequest();
+    resetRequestState();
+  }
+
   const createNewSession = useCallback(() => {
     const newSession: ChatSession = {
       id: crypto.randomUUID(),
@@ -59,7 +73,7 @@ export function useChat() {
 
   useEffect(() => {
     return () => {
-      abortControllerRef.current?.abort();
+      stopActiveRequest();
     };
   }, []);
 
@@ -178,20 +192,6 @@ export function useChat() {
     model: Model
   ) {
     await sendToApi(messages, sessionId, model);
-  }
-
-  function stopActiveRequest() {
-    abortControllerRef.current?.abort();
-  }
-
-  function resetRequestState() {
-    abortControllerRef.current = null;
-    setLoading(false);
-  }
-
-  function cancelRequest() {
-    stopActiveRequest();
-    resetRequestState();
   }
 
   async function sendMessage() {
