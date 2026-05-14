@@ -80,23 +80,21 @@ export function useChat() {
     }
   }, [sessions, activeSessionId, createNewSession, setActiveSessionId]);
 
-  function updateSession(
-    sessionId: string,
-    updater: (session: ChatSession) => ChatSession
-  ) {
-    setSessions((prev) =>
-      prev.map((session) => {
-        if (session.id !== sessionId) {
-          return session;
-        }
-
-        return {
-          ...updater(session),
-          updatedAt: now(),
-        };
-      })
-    );
-  }
+  const updateSession = useCallback(
+    (sessionId: string, updater: (session: ChatSession) => ChatSession) => {
+      setSessions((prev) =>
+        prev.map((session) =>
+          session.id === sessionId
+            ? {
+                ...updater(session),
+                updatedAt: now(),
+              }
+            : session
+        )
+      );
+    },
+    [setSessions]
+  );
 
   async function sendToApi(
     nextMessages: Message[],
