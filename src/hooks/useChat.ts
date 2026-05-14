@@ -194,8 +194,8 @@ export function useChat() {
   }
 
   function generateSessionTitle(content: string) {
-    return content.length > 40
-      ? content.slice(0, 40).trim() + "..."
+    return content.length > 25
+      ? content.slice(0, 25).trim() + "..."
       : content.trim();
   }
 
@@ -219,7 +219,7 @@ export function useChat() {
         ...session,
         title: isNewChatTitle
           ? generateSessionTitle(
-              userMessage.content.replace(/[?.!]/g, "").slice(0, 20).trim()
+              userMessage.content.replace(/[?.!]/g, "").slice(0, 25).trim()
             )
           : session.title,
         messages: nextMessages,

@@ -46,7 +46,7 @@ export function ChatSidebar({
                 <Button
                   onClick={() => setActiveSessionId(session.id)}
                   variant="outline"
-                  className={`text-left p-2 rounded-lg w-48 min-w-0 truncate flex-1 ${
+                  className={`text-left normal-case font-normal p-2 rounded-lg w-48 min-w-0 truncate flex-1 ${
                     session.id === activeSessionId
                       ? "bg-muted-foreground/40 hover:bg-muted-foreground/30"
                       : "hover:bg-secondary/50"
