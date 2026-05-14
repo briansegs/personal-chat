@@ -262,21 +262,13 @@ export function useChat() {
   }
 
   function deleteSession(sessionId: string) {
-    setSessions((prev) => {
-      const updated = prev.filter((s) => s.id !== sessionId);
+    const updated = sessions.filter((session) => session.id !== sessionId);
 
-      if (activeSessionId === sessionId) {
-        const nextActive = updated[0];
+    setSessions(updated);
 
-        if (nextActive) {
-          setActiveSessionId(nextActive.id);
-        } else {
-          setActiveSessionId(null);
-        }
-      }
-
-      return updated;
-    });
+    if (activeSessionId === sessionId) {
+      setActiveSessionId(updated[0]?.id ?? null);
+    }
   }
 
   return {
