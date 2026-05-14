@@ -169,9 +169,11 @@ export function useChat() {
       : content.trim();
   }
 
-  function appendUserMessage(sessionId: string, userMessage: Message) {
-    const nextMessages = [...messages, userMessage];
-
+  function appendUserMessage(
+    sessionId: string,
+    userMessage: Message,
+    nextMessages: Message[]
+  ) {
     updateSession(sessionId, (session) => {
       const isNewChatTitle = session.title === DEFAULT_TITLE || !session.title;
 
@@ -185,8 +187,6 @@ export function useChat() {
         messages: nextMessages,
       };
     });
-
-    return nextMessages;
   }
 
   async function generateAssistantResponse(
@@ -207,10 +207,16 @@ export function useChat() {
       content: input,
     };
 
+    const session = sessions.find((session) => session.id === activeSessionId);
+
+    if (!session) return;
+
+    const nextMessages = [...session.messages, userMessage];
+
+    appendUserMessage(activeSessionId, userMessage, nextMessages);
+
     setInput("");
     setLoading(true);
-
-    const nextMessages = appendUserMessage(activeSessionId, userMessage);
 
     try {
       await generateAssistantResponse(activeSessionId, nextMessages, model);
