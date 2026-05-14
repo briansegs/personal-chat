@@ -1,9 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ChatSession, Message, Model } from "@/app/types";
+import { streamChat } from "@/lib/streamChat";
 
 const SESSION_KEY = "chat-sessions";
 const ACTIVE_SESSION = "active-chat-session";
+const DEFAULT_MODEL: Model = "phi3";
+const DEFAULT_TITLE = "New Chat";
+
+function now() {
+  return new Date().toISOString();
+}
 
 export function useChat() {
   const [input, setInput] = useState("");
@@ -25,7 +32,7 @@ export function useChat() {
 
   const messages = activeSession?.messages ?? [];
 
-  const model = activeSession?.model ?? "phi3";
+  const model = activeSession?.model ?? DEFAULT_MODEL;
 
   function setModel(model: Model) {
     if (!activeSessionId) return;
@@ -36,13 +43,27 @@ export function useChat() {
     }));
   }
 
+  function stopActiveRequest() {
+    abortControllerRef.current?.abort();
+  }
+
+  function resetRequestState() {
+    abortControllerRef.current = null;
+    setLoading(false);
+  }
+
+  function cancelRequest() {
+    stopActiveRequest();
+    resetRequestState();
+  }
+
   const createNewSession = useCallback(() => {
     const newSession: ChatSession = {
       id: crypto.randomUUID(),
-      title: "New Chat",
-      model: "phi3",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      title: DEFAULT_TITLE,
+      model: DEFAULT_MODEL,
+      createdAt: now(),
+      updatedAt: now(),
       messages: [],
     };
 
@@ -52,16 +73,19 @@ export function useChat() {
 
   useEffect(() => {
     return () => {
-      abortControllerRef.current?.abort();
+      stopActiveRequest();
     };
   }, []);
 
   useEffect(() => {
     if (sessions.length === 0) {
-      if (!activeSessionId) {
-        createNewSession();
-      }
+      createNewSession();
+    }
+  }, [sessions.length, createNewSession]);
 
+  useEffect(() => {
+    if (!activeSessionId) {
+      setActiveSessionId(sessions[0]?.id ?? null);
       return;
     }
 
@@ -70,26 +94,49 @@ export function useChat() {
     );
 
     if (!hasActiveSession) {
-      setActiveSessionId(sessions[0].id);
+      setActiveSessionId(sessions[0]?.id ?? null);
     }
-  }, [sessions, activeSessionId, createNewSession, setActiveSessionId]);
+  }, [sessions, activeSessionId, setActiveSessionId]);
 
-  function updateSession(
-    sessionId: string,
-    updater: (session: ChatSession) => ChatSession
-  ) {
-    setSessions((prev) =>
-      prev.map((session) => {
-        if (session.id !== sessionId) {
-          return session;
-        }
+  const updateSession = useCallback(
+    (sessionId: string, updater: (session: ChatSession) => ChatSession) => {
+      setSessions((prev) =>
+        prev.map((session) =>
+          session.id === sessionId
+            ? {
+                ...updater(session),
+                updatedAt: now(),
+              }
+            : session
+        )
+      );
+    },
+    [setSessions]
+  );
 
-        return {
-          ...updater(session),
-          updatedAt: new Date().toISOString(),
+  function updateAssistantMessage(sessionId: string, assistantContent: string) {
+    updateSession(sessionId, (session) => {
+      const copy = [...session.messages];
+
+      const lastMessage = copy[copy.length - 1];
+
+      if (lastMessage?.role === "assistant") {
+        copy[copy.length - 1] = {
+          role: "assistant",
+          content: assistantContent,
         };
-      })
-    );
+      } else {
+        copy.push({
+          role: "assistant",
+          content: assistantContent,
+        });
+      }
+
+      return {
+        ...session,
+        messages: copy,
+      };
+    });
   }
 
   async function sendToApi(
@@ -101,96 +148,19 @@ export function useChat() {
 
     abortControllerRef.current = controller;
 
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        messages: nextMessages,
-      }),
-    });
-
-    if (!res.ok) {
-      const details = await res.text().catch(() => "");
-      throw new Error(
-        `Failed to send message (${res.status}): ${details || res.statusText}`
-      );
-    }
-
-    const reader = res.body?.getReader();
-    const decoder = new TextDecoder();
-
-    let buffer = "";
-
     let assistantText = "";
 
-    if (!reader) return;
+    await streamChat({
+      messages: nextMessages,
+      model,
+      signal: controller.signal,
 
-    function updateAssistantMessage(content: string) {
-      assistantText += content;
+      onChunk(content) {
+        assistantText += content;
 
-      updateSession(sessionId, (session) => {
-        const copy = [...session.messages];
-
-        const lastMessage = copy[copy.length - 1];
-
-        if (lastMessage?.role === "assistant") {
-          copy[copy.length - 1] = {
-            role: "assistant",
-            content: assistantText,
-          };
-        } else {
-          copy.push({
-            role: "assistant",
-            content: assistantText,
-          });
-        }
-
-        return {
-          ...session,
-          messages: copy,
-        };
-      });
-    }
-
-    while (true) {
-      const { value, done } = await reader.read();
-
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-
-      for (const line of lines) {
-        try {
-          const json = JSON.parse(line);
-          const content = json.message?.content;
-
-          if (!content) continue;
-
-          updateAssistantMessage(content);
-        } catch (error) {
-          console.error("Failed to parse stream chunk:", error);
-        }
-      }
-    }
-
-    buffer += decoder.decode();
-
-    if (buffer.trim()) {
-      try {
-        const json = JSON.parse(buffer);
-        const content = json.message?.content;
-
-        if (content) {
-          updateAssistantMessage(content);
-        }
-      } catch (error) {
-        console.error("Failed to parse final stream chunk:", error);
-      }
-    }
+        updateAssistantMessage(sessionId, assistantText);
+      },
+    });
   }
 
   function generateSessionTitle(content: string) {
@@ -199,21 +169,13 @@ export function useChat() {
       : content.trim();
   }
 
-  async function sendMessage() {
-    if (!input.trim() || loading || !activeSessionId) return;
-
-    const userMessage: Message = {
-      role: "user",
-      content: input,
-    };
-
-    setInput("");
-    setLoading(true);
-
-    const nextMessages = [...messages, userMessage];
-
-    updateSession(activeSessionId, (session) => {
-      const isNewChatTitle = session.title === "New Chat" || !session.title;
+  function appendUserMessage(
+    sessionId: string,
+    userMessage: Message,
+    nextMessages: Message[]
+  ) {
+    updateSession(sessionId, (session) => {
+      const isNewChatTitle = session.title === DEFAULT_TITLE || !session.title;
 
       return {
         ...session,
@@ -225,9 +187,39 @@ export function useChat() {
         messages: nextMessages,
       };
     });
+  }
+
+  async function generateAssistantResponse(
+    sessionId: string,
+    messages: Message[],
+    model: Model
+  ) {
+    await sendToApi(messages, sessionId, model);
+  }
+
+  async function sendMessage() {
+    if (!input.trim() || loading || !activeSessionId) {
+      return;
+    }
+
+    const userMessage: Message = {
+      role: "user",
+      content: input,
+    };
+
+    const session = sessions.find((session) => session.id === activeSessionId);
+
+    if (!session) return;
+
+    const nextMessages = [...session.messages, userMessage];
+
+    appendUserMessage(activeSessionId, userMessage, nextMessages);
+
+    setInput("");
+    setLoading(true);
 
     try {
-      await sendToApi(nextMessages, activeSessionId, model);
+      await generateAssistantResponse(activeSessionId, nextMessages, model);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         return;
@@ -235,30 +227,23 @@ export function useChat() {
 
       console.error(error);
     } finally {
-      abortControllerRef.current = null;
-      setLoading(false);
+      resetRequestState();
     }
   }
 
   function clearChat() {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-
-    setLoading(false);
+    cancelRequest();
 
     if (!activeSessionId) return;
 
     updateSession(activeSessionId, (session) => ({
       ...session,
       messages: [],
-      updatedAt: new Date().toISOString(),
     }));
   }
 
   function stopGenerating() {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-    setLoading(false);
+    cancelRequest();
   }
 
   function deleteSession(sessionId: string) {
