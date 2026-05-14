@@ -271,6 +271,17 @@ export function useChat() {
     }
   }
 
+  function renameSession(sessionId: string, title: string) {
+    const trimmedTitle = title.trim();
+
+    if (!trimmedTitle) return;
+
+    updateSession(sessionId, (session) => ({
+      ...session,
+      title: trimmedTitle,
+    }));
+  }
+
   return {
     input,
     setInput,
@@ -287,5 +298,6 @@ export function useChat() {
     setActiveSessionId,
     createNewSession,
     deleteSession,
+    renameSession,
   };
 }
