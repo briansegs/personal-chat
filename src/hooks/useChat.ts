@@ -79,10 +79,13 @@ export function useChat() {
 
   useEffect(() => {
     if (sessions.length === 0) {
-      if (!activeSessionId) {
-        createNewSession();
-      }
+      createNewSession();
+    }
+  }, [sessions.length, createNewSession]);
 
+  useEffect(() => {
+    if (!activeSessionId) {
+      setActiveSessionId(sessions[0]?.id ?? null);
       return;
     }
 
@@ -91,9 +94,9 @@ export function useChat() {
     );
 
     if (!hasActiveSession) {
-      setActiveSessionId(sessions[0].id);
+      setActiveSessionId(sessions[0]?.id ?? null);
     }
-  }, [sessions, activeSessionId, createNewSession, setActiveSessionId]);
+  }, [sessions, activeSessionId, setActiveSessionId]);
 
   const updateSession = useCallback(
     (sessionId: string, updater: (session: ChatSession) => ChatSession) => {
