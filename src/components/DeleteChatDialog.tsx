@@ -26,7 +26,11 @@ export function DeleteChatDialog({
   return (
     <AlertDialog>
       <AlertDialogTrigger asChild>
-        <Button size="icon" variant="destructive">
+        <Button
+          size="icon"
+          variant="destructive"
+          aria-label="Delete chat session"
+        >
           <TrashIcon />
         </Button>
       </AlertDialogTrigger>
