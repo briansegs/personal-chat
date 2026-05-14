@@ -57,10 +57,22 @@ export function useChat() {
   }, []);
 
   useEffect(() => {
-    if (sessions.length === 0 && !activeSessionId) {
-      createNewSession();
+    if (sessions.length === 0) {
+      if (!activeSessionId) {
+        createNewSession();
+      }
+
+      return;
     }
-  }, [sessions.length, activeSessionId, createNewSession]);
+
+    const hasActiveSession = sessions.some(
+      (session) => session.id === activeSessionId
+    );
+
+    if (!hasActiveSession) {
+      setActiveSessionId(sessions[0].id);
+    }
+  }, [sessions, activeSessionId, createNewSession, setActiveSessionId]);
 
   function updateSession(
     sessionId: string,
