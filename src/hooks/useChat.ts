@@ -180,9 +180,18 @@ export function useChat() {
     await sendToApi(messages, sessionId, model);
   }
 
+  function stopActiveRequest() {
+    abortControllerRef.current?.abort();
+  }
+
   function resetRequestState() {
     abortControllerRef.current = null;
     setLoading(false);
+  }
+
+  function cancelRequest() {
+    stopActiveRequest();
+    resetRequestState();
   }
 
   async function sendMessage() {
@@ -214,24 +223,18 @@ export function useChat() {
   }
 
   function clearChat() {
-    abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-
-    setLoading(false);
+    cancelRequest();
 
     if (!activeSessionId) return;
 
     updateSession(activeSessionId, (session) => ({
       ...session,
       messages: [],
-      updatedAt: now(),
     }));
   }
 
   function stopGenerating() {
-    abortControllerRef.current?.abort();
-
-    resetRequestState();
+    cancelRequest();
   }
 
   function deleteSession(sessionId: string) {
