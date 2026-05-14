@@ -97,6 +97,31 @@ export function useChat() {
     [setSessions]
   );
 
+  function updateAssistantMessage(sessionId: string, assistantContent: string) {
+    updateSession(sessionId, (session) => {
+      const copy = [...session.messages];
+
+      const lastMessage = copy[copy.length - 1];
+
+      if (lastMessage?.role === "assistant") {
+        copy[copy.length - 1] = {
+          role: "assistant",
+          content: assistantContent,
+        };
+      } else {
+        copy.push({
+          role: "assistant",
+          content: assistantContent,
+        });
+      }
+
+      return {
+        ...session,
+        messages: copy,
+      };
+    });
+  }
+
   async function sendToApi(
     nextMessages: Message[],
     sessionId: string,
@@ -108,40 +133,15 @@ export function useChat() {
 
     let assistantText = "";
 
-    function appendAssistantMessage(sessionId: string, content: string) {
-      assistantText += content;
-
-      updateSession(sessionId, (session) => {
-        const copy = [...session.messages];
-
-        const lastMessage = copy[copy.length - 1];
-
-        if (lastMessage?.role === "assistant") {
-          copy[copy.length - 1] = {
-            role: "assistant",
-            content: assistantText,
-          };
-        } else {
-          copy.push({
-            role: "assistant",
-            content: assistantText,
-          });
-        }
-
-        return {
-          ...session,
-          messages: copy,
-        };
-      });
-    }
-
     await streamChat({
       messages: nextMessages,
       model,
       signal: controller.signal,
 
       onChunk(content) {
-        appendAssistantMessage(sessionId, content);
+        assistantText += content;
+
+        updateAssistantMessage(sessionId, assistantText);
       },
     });
   }
@@ -152,20 +152,10 @@ export function useChat() {
       : content.trim();
   }
 
-  async function sendMessage() {
-    if (!input.trim() || loading || !activeSessionId) return;
-
-    const userMessage: Message = {
-      role: "user",
-      content: input,
-    };
-
-    setInput("");
-    setLoading(true);
-
+  function appendUserMessage(sessionId: string, userMessage: Message) {
     const nextMessages = [...messages, userMessage];
 
-    updateSession(activeSessionId, (session) => {
+    updateSession(sessionId, (session) => {
       const isNewChatTitle = session.title === DEFAULT_TITLE || !session.title;
 
       return {
@@ -179,8 +169,39 @@ export function useChat() {
       };
     });
 
+    return nextMessages;
+  }
+
+  async function generateAssistantResponse(
+    sessionId: string,
+    messages: Message[],
+    model: Model
+  ) {
+    await sendToApi(messages, sessionId, model);
+  }
+
+  function resetRequestState() {
+    abortControllerRef.current = null;
+    setLoading(false);
+  }
+
+  async function sendMessage() {
+    if (!input.trim() || loading || !activeSessionId) {
+      return;
+    }
+
+    const userMessage: Message = {
+      role: "user",
+      content: input,
+    };
+
+    setInput("");
+    setLoading(true);
+
+    const nextMessages = appendUserMessage(activeSessionId, userMessage);
+
     try {
-      await sendToApi(nextMessages, activeSessionId, model);
+      await generateAssistantResponse(activeSessionId, nextMessages, model);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         return;
@@ -188,8 +209,7 @@ export function useChat() {
 
       console.error(error);
     } finally {
-      abortControllerRef.current = null;
-      setLoading(false);
+      resetRequestState();
     }
   }
 
@@ -210,8 +230,8 @@ export function useChat() {
 
   function stopGenerating() {
     abortControllerRef.current?.abort();
-    abortControllerRef.current = null;
-    setLoading(false);
+
+    resetRequestState();
   }
 
   function deleteSession(sessionId: string) {
