@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ChatSession, Message, Model } from "@/app/types";
+import { streamChat } from "@/lib/streamChat";
 
 const SESSION_KEY = "chat-sessions";
 const ACTIVE_SESSION = "active-chat-session";
@@ -105,33 +106,9 @@ export function useChat() {
 
     abortControllerRef.current = controller;
 
-    const res = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      signal: controller.signal,
-      body: JSON.stringify({
-        model,
-        messages: nextMessages,
-      }),
-    });
-
-    if (!res.ok) {
-      const details = await res.text().catch(() => "");
-      throw new Error(
-        `Failed to send message (${res.status}): ${details || res.statusText}`
-      );
-    }
-
-    const reader = res.body?.getReader();
-    const decoder = new TextDecoder();
-
-    let buffer = "";
-
     let assistantText = "";
 
-    if (!reader) return;
-
-    function updateAssistantMessage(content: string) {
+    function appendAssistantMessage(sessionId: string, content: string) {
       assistantText += content;
 
       updateSession(sessionId, (session) => {
@@ -158,43 +135,15 @@ export function useChat() {
       });
     }
 
-    while (true) {
-      const { value, done } = await reader.read();
+    await streamChat({
+      messages: nextMessages,
+      model,
+      signal: controller.signal,
 
-      if (done) break;
-
-      buffer += decoder.decode(value, { stream: true });
-      const lines = buffer.split("\n");
-      buffer = lines.pop() ?? "";
-
-      for (const line of lines) {
-        try {
-          const json = JSON.parse(line);
-          const content = json.message?.content;
-
-          if (!content) continue;
-
-          updateAssistantMessage(content);
-        } catch (error) {
-          console.error("Failed to parse stream chunk:", error);
-        }
-      }
-    }
-
-    buffer += decoder.decode();
-
-    if (buffer.trim()) {
-      try {
-        const json = JSON.parse(buffer);
-        const content = json.message?.content;
-
-        if (content) {
-          updateAssistantMessage(content);
-        }
-      } catch (error) {
-        console.error("Failed to parse final stream chunk:", error);
-      }
-    }
+      onChunk(content) {
+        appendAssistantMessage(sessionId, content);
+      },
+    });
   }
 
   function generateSessionTitle(content: string) {
