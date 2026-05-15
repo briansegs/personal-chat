@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ChatSession, Message, Model } from "@/app/types";
-import { appendMessage, upsertAssistantMessage } from "@/util/messageUtils";
+import { appendMessage, updateMessageContent } from "@/util/messageUtils";
 import {
   DEFAULT_TITLE,
   generateSessionTitle,
@@ -9,6 +9,7 @@ import {
 } from "@/util/titleUtils";
 import { generateAssistantResponse } from "@/lib/chatService";
 import { ChatStatus } from "@/app/types";
+import { createMessage } from "@/util/createMessage";
 
 const SESSION_KEY = "chat-sessions";
 const ACTIVE_SESSION = "active-chat-session";
@@ -142,16 +143,24 @@ export function useChat() {
       return;
     }
 
-    const userMessage: Message = {
+    const userMessage = createMessage({
       role: "user",
       content: input,
-    };
+    });
 
     const session = sessions.find((session) => session.id === activeSessionId);
 
     if (!session) return;
 
-    const nextMessages = appendMessage(session.messages, userMessage);
+    const assistantMessage = createMessage({
+      role: "assistant",
+      content: "",
+    });
+
+    const nextMessages = appendMessage(
+      appendMessage(session.messages, userMessage),
+      assistantMessage
+    );
 
     appendUserMessage(activeSessionId, userMessage, nextMessages);
 
@@ -171,7 +180,11 @@ export function useChat() {
         onChunk(content) {
           updateSession(activeSessionId, (session) => ({
             ...session,
-            messages: upsertAssistantMessage(session.messages, content),
+            messages: updateMessageContent(
+              session.messages,
+              assistantMessage.id,
+              content
+            ),
           }));
         },
       });

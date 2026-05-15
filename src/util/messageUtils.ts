@@ -4,27 +4,17 @@ export function appendMessage(messages: Message[], message: Message) {
   return [...messages, message];
 }
 
-export function upsertAssistantMessage(
+export function updateMessageContent(
   messages: Message[],
+  messageId: string,
   content: string
-): Message[] {
-  const lastMessage = messages[messages.length - 1];
-
-  if (lastMessage?.role === "assistant") {
-    return [
-      ...messages.slice(0, -1),
-      {
-        role: "assistant",
-        content,
-      },
-    ];
-  }
-
-  return [
-    ...messages,
-    {
-      role: "assistant",
-      content,
-    },
-  ];
+) {
+  return messages.map((message) =>
+    message.id === messageId
+      ? {
+          ...message,
+          content,
+        }
+      : message
+  );
 }
