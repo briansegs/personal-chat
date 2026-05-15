@@ -15,6 +15,7 @@ type InputContainerProps = {
   model: Model;
   setModel: (model: Model) => void;
   stopGenerating: () => void;
+  error: string | null;
 };
 
 export function InputContainer({
@@ -27,13 +28,14 @@ export function InputContainer({
   model,
   setModel,
   stopGenerating,
+  error,
 }: InputContainerProps) {
   return (
     <form
       onSubmit={handleSubmit}
       className="flex flex-col gap-2 border p-2 relative bg-card shadow"
     >
-      {status === "streaming" && <StatusMessage />}
+      {status !== "idle" && <StatusMessage error={error} status={status} />}
 
       <Textarea
         ref={textareaRef}

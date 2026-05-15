@@ -26,6 +26,7 @@ export default function ChatClient() {
     createNewSession,
     deleteSession,
     renameSession,
+    error,
   } = useChat();
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -91,6 +92,7 @@ export default function ChatClient() {
             model={model}
             setModel={setModel}
             stopGenerating={stopGenerating}
+            error={error}
           />
         </main>
       </div>

@@ -22,6 +22,7 @@ function now() {
 export function useChat() {
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<ChatStatus>("idle");
+  const [error, setError] = useState<string | null>(null);
   const [sessions, setSessions] = useLocalStorage<ChatSession[]>(
     SESSION_KEY,
     []
@@ -57,6 +58,7 @@ export function useChat() {
   function resetRequestState() {
     abortControllerRef.current = null;
     setStatus("idle");
+    setError(null);
   }
 
   function cancelRequest() {
@@ -139,7 +141,7 @@ export function useChat() {
   }
 
   async function sendMessage() {
-    if (!input.trim() || status === "streaming" || !activeSessionId) {
+    if (!input.trim() || status !== "idle" || !activeSessionId) {
       return;
     }
 
@@ -165,6 +167,7 @@ export function useChat() {
     appendUserMessage(activeSessionId, userMessage, nextMessages);
 
     setInput("");
+    setError(null);
     setStatus("streaming");
 
     try {
@@ -194,7 +197,7 @@ export function useChat() {
       }
 
       setStatus("error");
-
+      setError(error instanceof Error ? error.message : "Unknown error");
       console.error(error);
     } finally {
       resetRequestState();
@@ -254,5 +257,6 @@ export function useChat() {
     createNewSession,
     deleteSession,
     renameSession,
+    error,
   };
 }
