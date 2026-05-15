@@ -13,7 +13,7 @@ export default function ChatClient() {
   const {
     input,
     setInput,
-    loading,
+    status,
     messages,
     model,
     setModel,
@@ -51,7 +51,7 @@ export default function ChatClient() {
   }
 
   function triggerSendMessage(e: React.KeyboardEvent) {
-    if (e.key === "Enter" && !e.shiftKey && !loading) {
+    if (e.key === "Enter" && !e.shiftKey && status === "idle") {
       e.preventDefault();
       sendMessage();
     }
@@ -86,7 +86,7 @@ export default function ChatClient() {
             textareaRef={textareaRef}
             input={input}
             setInput={setInput}
-            loading={loading}
+            status={status}
             triggerSendMessage={triggerSendMessage}
             model={model}
             setModel={setModel}

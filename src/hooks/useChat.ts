@@ -8,6 +8,7 @@ import {
   isDefaultTitle,
 } from "@/util/titleUtils";
 import { generateAssistantResponse } from "@/lib/chatService";
+import { ChatStatus } from "@/app/types";
 
 const SESSION_KEY = "chat-sessions";
 const ACTIVE_SESSION = "active-chat-session";
@@ -19,7 +20,7 @@ function now() {
 
 export function useChat() {
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<ChatStatus>("idle");
   const [sessions, setSessions] = useLocalStorage<ChatSession[]>(
     SESSION_KEY,
     []
@@ -54,7 +55,7 @@ export function useChat() {
 
   function resetRequestState() {
     abortControllerRef.current = null;
-    setLoading(false);
+    setStatus("idle");
   }
 
   function cancelRequest() {
@@ -137,7 +138,7 @@ export function useChat() {
   }
 
   async function sendMessage() {
-    if (!input.trim() || loading || !activeSessionId) {
+    if (!input.trim() || status === "streaming" || !activeSessionId) {
       return;
     }
 
@@ -155,7 +156,7 @@ export function useChat() {
     appendUserMessage(activeSessionId, userMessage, nextMessages);
 
     setInput("");
-    setLoading(true);
+    setStatus("streaming");
 
     try {
       const controller = new AbortController();
@@ -178,6 +179,8 @@ export function useChat() {
       if (error instanceof Error && error.name === "AbortError") {
         return;
       }
+
+      setStatus("error");
 
       console.error(error);
     } finally {
@@ -224,7 +227,7 @@ export function useChat() {
   return {
     input,
     setInput,
-    loading,
+    status,
     messages,
     model,
     setModel,

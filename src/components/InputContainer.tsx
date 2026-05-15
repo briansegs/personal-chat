@@ -1,4 +1,4 @@
-import { Model } from "@/app/types";
+import { ChatStatus, Model } from "@/app/types";
 import React, { Dispatch, RefObject, SetStateAction } from "react";
 import { MessageSubmitButton } from "./MessageSubmitButton";
 import { ModelSelect } from "./ModelSelect";
@@ -9,7 +9,7 @@ type InputContainerProps = {
   handleSubmit: (e: React.SubmitEvent<HTMLFormElement>) => void;
   input: string;
   setInput: Dispatch<SetStateAction<string>>;
-  loading: boolean;
+  status: ChatStatus;
   triggerSendMessage: (e: React.KeyboardEvent) => void;
   textareaRef: RefObject<HTMLTextAreaElement | null>;
   model: Model;
@@ -22,7 +22,7 @@ export function InputContainer({
   textareaRef,
   input,
   setInput,
-  loading,
+  status,
   triggerSendMessage,
   model,
   setModel,
@@ -33,7 +33,7 @@ export function InputContainer({
       onSubmit={handleSubmit}
       className="flex flex-col gap-2 border p-2 relative bg-card shadow"
     >
-      {loading && <StatusMessage />}
+      {status === "streaming" && <StatusMessage />}
 
       <Textarea
         ref={textareaRef}
@@ -42,16 +42,13 @@ export function InputContainer({
         onKeyDown={(e) => triggerSendMessage(e)}
         placeholder="Ask something..."
         rows={1}
-        disabled={loading}
+        disabled={status === "streaming"}
       />
 
       <div className="flex items-center justify-between">
         <ModelSelect model={model} setModel={setModel} />
 
-        <MessageSubmitButton
-          loading={loading}
-          stopGenerating={stopGenerating}
-        />
+        <MessageSubmitButton status={status} stopGenerating={stopGenerating} />
       </div>
     </form>
   );
