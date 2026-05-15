@@ -189,14 +189,6 @@ export function useChat() {
     });
   }
 
-  async function generateAssistantResponse(
-    sessionId: string,
-    messages: Message[],
-    model: Model
-  ) {
-    await sendToApi(messages, sessionId, model);
-  }
-
   async function sendMessage() {
     if (!input.trim() || loading || !activeSessionId) {
       return;
@@ -219,7 +211,7 @@ export function useChat() {
     setLoading(true);
 
     try {
-      await generateAssistantResponse(activeSessionId, nextMessages, model);
+      await sendToApi(nextMessages, activeSessionId, model);
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         return;
