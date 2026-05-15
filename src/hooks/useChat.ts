@@ -141,7 +141,7 @@ export function useChat() {
   }
 
   async function sendMessage() {
-    if (!input.trim() || status !== "idle" || !activeSessionId) {
+    if (!input.trim() || status === "streaming" || !activeSessionId) {
       return;
     }
 
@@ -170,6 +170,7 @@ export function useChat() {
     setError(null);
     setStatus("streaming");
 
+    let failed = false;
     try {
       const controller = new AbortController();
 
@@ -196,11 +197,15 @@ export function useChat() {
         return;
       }
 
+      failed = true;
       setStatus("error");
       setError(error instanceof Error ? error.message : "Unknown error");
       console.error(error);
     } finally {
-      resetRequestState();
+      abortControllerRef.current = null;
+      if (!failed) {
+        setStatus("idle");
+      }
     }
   }
 
