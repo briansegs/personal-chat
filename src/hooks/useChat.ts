@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ChatSession, Message, Model } from "@/app/types";
 import { streamChat } from "@/lib/streamChat";
+import { appendMessage, upsertAssistantMessage } from "@/util/messageUtils";
 
 const SESSION_KEY = "chat-sessions";
 const ACTIVE_SESSION = "active-chat-session";
@@ -115,28 +116,10 @@ export function useChat() {
   );
 
   function updateAssistantMessage(sessionId: string, assistantContent: string) {
-    updateSession(sessionId, (session) => {
-      const copy = [...session.messages];
-
-      const lastMessage = copy[copy.length - 1];
-
-      if (lastMessage?.role === "assistant") {
-        copy[copy.length - 1] = {
-          role: "assistant",
-          content: assistantContent,
-        };
-      } else {
-        copy.push({
-          role: "assistant",
-          content: assistantContent,
-        });
-      }
-
-      return {
-        ...session,
-        messages: copy,
-      };
-    });
+    updateSession(sessionId, (session) => ({
+      ...session,
+      messages: upsertAssistantMessage(session.messages, assistantContent),
+    }));
   }
 
   async function sendToApi(
@@ -203,7 +186,7 @@ export function useChat() {
 
     if (!session) return;
 
-    const nextMessages = [...session.messages, userMessage];
+    const nextMessages = appendMessage(session.messages, userMessage);
 
     appendUserMessage(activeSessionId, userMessage, nextMessages);
 
