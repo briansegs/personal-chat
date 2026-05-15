@@ -1,12 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ChatSession, Message, Model } from "@/app/types";
-import { streamChat } from "@/lib/streamChat";
+import { appendMessage, updateMessageContent } from "@/util/messageUtils";
+import {
+  DEFAULT_TITLE,
+  generateSessionTitle,
+  isDefaultTitle,
+} from "@/util/titleUtils";
+import { generateAssistantResponse } from "@/lib/chatService";
+import { ChatStatus } from "@/app/types";
+import { createMessage } from "@/util/createMessage";
 
 const SESSION_KEY = "chat-sessions";
 const ACTIVE_SESSION = "active-chat-session";
 const DEFAULT_MODEL: Model = "phi3";
-const DEFAULT_TITLE = "New Chat";
 
 function now() {
   return new Date().toISOString();
@@ -14,7 +21,8 @@ function now() {
 
 export function useChat() {
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [status, setStatus] = useState<ChatStatus>("idle");
+  const [error, setError] = useState<string | null>(null);
   const [sessions, setSessions] = useLocalStorage<ChatSession[]>(
     SESSION_KEY,
     []
@@ -49,7 +57,8 @@ export function useChat() {
 
   function resetRequestState() {
     abortControllerRef.current = null;
-    setLoading(false);
+    setStatus("idle");
+    setError(null);
   }
 
   function cancelRequest() {
@@ -114,120 +123,89 @@ export function useChat() {
     [setSessions]
   );
 
-  function updateAssistantMessage(sessionId: string, assistantContent: string) {
-    updateSession(sessionId, (session) => {
-      const copy = [...session.messages];
-
-      const lastMessage = copy[copy.length - 1];
-
-      if (lastMessage?.role === "assistant") {
-        copy[copy.length - 1] = {
-          role: "assistant",
-          content: assistantContent,
-        };
-      } else {
-        copy.push({
-          role: "assistant",
-          content: assistantContent,
-        });
-      }
-
-      return {
-        ...session,
-        messages: copy,
-      };
-    });
-  }
-
-  async function sendToApi(
-    nextMessages: Message[],
-    sessionId: string,
-    model: Model
-  ) {
-    const controller = new AbortController();
-
-    abortControllerRef.current = controller;
-
-    let assistantText = "";
-
-    await streamChat({
-      messages: nextMessages,
-      model,
-      signal: controller.signal,
-
-      onChunk(content) {
-        assistantText += content;
-
-        updateAssistantMessage(sessionId, assistantText);
-      },
-    });
-  }
-
-  function generateSessionTitle(content: string) {
-    return content.length > 25
-      ? content.slice(0, 25).trim() + "..."
-      : content.trim();
-  }
-
   function appendUserMessage(
     sessionId: string,
     userMessage: Message,
     nextMessages: Message[]
   ) {
     updateSession(sessionId, (session) => {
-      const isNewChatTitle = session.title === DEFAULT_TITLE || !session.title;
-
+      const shouldGenerateTitle = isDefaultTitle(session.title);
       return {
         ...session,
-        title: isNewChatTitle
-          ? generateSessionTitle(
-              userMessage.content.replace(/[?.!]/g, "").slice(0, 25).trim()
-            )
+        title: shouldGenerateTitle
+          ? generateSessionTitle(userMessage.content)
           : session.title,
         messages: nextMessages,
       };
     });
   }
 
-  async function generateAssistantResponse(
-    sessionId: string,
-    messages: Message[],
-    model: Model
-  ) {
-    await sendToApi(messages, sessionId, model);
-  }
-
   async function sendMessage() {
-    if (!input.trim() || loading || !activeSessionId) {
+    if (!input.trim() || status === "streaming" || !activeSessionId) {
       return;
     }
 
-    const userMessage: Message = {
+    const userMessage = createMessage({
       role: "user",
       content: input,
-    };
+    });
 
     const session = sessions.find((session) => session.id === activeSessionId);
 
     if (!session) return;
 
-    const nextMessages = [...session.messages, userMessage];
+    const assistantMessage = createMessage({
+      role: "assistant",
+      content: "",
+    });
+
+    const nextMessages = appendMessage(
+      appendMessage(session.messages, userMessage),
+      assistantMessage
+    );
 
     appendUserMessage(activeSessionId, userMessage, nextMessages);
 
     setInput("");
-    setLoading(true);
+    setError(null);
+    setStatus("streaming");
 
+    let failed = false;
     try {
-      await generateAssistantResponse(activeSessionId, nextMessages, model);
+      const controller = new AbortController();
+
+      abortControllerRef.current = controller;
+
+      await generateAssistantResponse({
+        messages: nextMessages,
+        model,
+        signal: controller.signal,
+
+        onChunk(content) {
+          updateSession(activeSessionId, (session) => ({
+            ...session,
+            messages: updateMessageContent(
+              session.messages,
+              assistantMessage.id,
+              content
+            ),
+          }));
+        },
+      });
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         return;
       }
 
+      failed = true;
+      setStatus("error");
+      setError(error instanceof Error ? error.message : "Unknown error");
       console.error(error);
     } finally {
-      resetRequestState();
+      abortControllerRef.current = null;
+      if (!failed) {
+        setStatus("idle");
+      }
     }
   }
 
@@ -270,7 +248,7 @@ export function useChat() {
   return {
     input,
     setInput,
-    loading,
+    status,
     messages,
     model,
     setModel,
@@ -284,5 +262,6 @@ export function useChat() {
     createNewSession,
     deleteSession,
     renameSession,
+    error,
   };
 }

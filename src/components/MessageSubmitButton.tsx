@@ -1,20 +1,21 @@
+import { ChatStatus } from "@/app/types";
 import { Button } from "./ui/button";
 
 type MessageSubmitButtonProps = {
-  loading: boolean;
+  status: ChatStatus;
   stopGenerating: () => void;
 };
 
 export function MessageSubmitButton({
-  loading,
+  status,
   stopGenerating,
 }: MessageSubmitButtonProps) {
   return (
     <Button
-      type={loading ? "button" : "submit"}
-      onClick={loading ? stopGenerating : undefined}
+      type={status === "streaming" ? "button" : "submit"}
+      onClick={status === "streaming" ? stopGenerating : undefined}
     >
-      {loading ? "Stop" : "Send"}
+      {status === "streaming" ? "Stop" : "Send"}
     </Button>
   );
 }

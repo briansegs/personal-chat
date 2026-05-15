@@ -1,4 +1,5 @@
 export type Message = {
+  id: string;
   role: "user" | "assistant";
   content: string;
 };
@@ -15,3 +16,5 @@ export type ChatSession = {
   updatedAt: string;
   messages: Message[];
 };
+
+export type ChatStatus = "idle" | "streaming" | "error";
