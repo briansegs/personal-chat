@@ -3,11 +3,15 @@ import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ChatSession, Message, Model } from "@/app/types";
 import { streamChat } from "@/lib/streamChat";
 import { appendMessage, upsertAssistantMessage } from "@/util/messageUtils";
+import {
+  DEFAULT_TITLE,
+  generateSessionTitle,
+  isDefaultTitle,
+} from "@/util/titleUtils";
 
 const SESSION_KEY = "chat-sessions";
 const ACTIVE_SESSION = "active-chat-session";
 const DEFAULT_MODEL: Model = "phi3";
-const DEFAULT_TITLE = "New Chat";
 
 function now() {
   return new Date().toISOString();
@@ -146,26 +150,17 @@ export function useChat() {
     });
   }
 
-  function generateSessionTitle(content: string) {
-    return content.length > 25
-      ? content.slice(0, 25).trim() + "..."
-      : content.trim();
-  }
-
   function appendUserMessage(
     sessionId: string,
     userMessage: Message,
     nextMessages: Message[]
   ) {
     updateSession(sessionId, (session) => {
-      const isNewChatTitle = session.title === DEFAULT_TITLE || !session.title;
-
+      const shouldGenerateTitle = isDefaultTitle(session.title);
       return {
         ...session,
-        title: isNewChatTitle
-          ? generateSessionTitle(
-              userMessage.content.replace(/[?.!]/g, "").slice(0, 25).trim()
-            )
+        title: shouldGenerateTitle
+          ? generateSessionTitle(userMessage.content)
           : session.title,
         messages: nextMessages,
       };
