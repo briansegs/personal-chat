@@ -6,6 +6,9 @@ export function isDefaultTitle(title?: string) {
 
 export function generateSessionTitle(content: string) {
   const cleaned = content.replace(/[?.!]/g, "").trim();
+  if (!cleaned) {
+    return DEFAULT_TITLE;
+  }
 
   if (cleaned.length <= 25) {
     return cleaned;
