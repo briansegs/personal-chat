@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocalStorage } from "@/hooks/useLocalStorage";
 import { ChatSession, Message, Model } from "@/app/types";
-import { streamChat } from "@/lib/streamChat";
 import { appendMessage, upsertAssistantMessage } from "@/util/messageUtils";
 import {
   DEFAULT_TITLE,
   generateSessionTitle,
   isDefaultTitle,
 } from "@/util/titleUtils";
+import { generateAssistantResponse } from "@/lib/chatService";
 
 const SESSION_KEY = "chat-sessions";
 const ACTIVE_SESSION = "active-chat-session";
@@ -119,37 +119,6 @@ export function useChat() {
     [setSessions]
   );
 
-  function updateAssistantMessage(sessionId: string, assistantContent: string) {
-    updateSession(sessionId, (session) => ({
-      ...session,
-      messages: upsertAssistantMessage(session.messages, assistantContent),
-    }));
-  }
-
-  async function sendToApi(
-    nextMessages: Message[],
-    sessionId: string,
-    model: Model
-  ) {
-    const controller = new AbortController();
-
-    abortControllerRef.current = controller;
-
-    let assistantText = "";
-
-    await streamChat({
-      messages: nextMessages,
-      model,
-      signal: controller.signal,
-
-      onChunk(content) {
-        assistantText += content;
-
-        updateAssistantMessage(sessionId, assistantText);
-      },
-    });
-  }
-
   function appendUserMessage(
     sessionId: string,
     userMessage: Message,
@@ -189,7 +158,22 @@ export function useChat() {
     setLoading(true);
 
     try {
-      await sendToApi(nextMessages, activeSessionId, model);
+      const controller = new AbortController();
+
+      abortControllerRef.current = controller;
+
+      await generateAssistantResponse({
+        messages: nextMessages,
+        model,
+        signal: controller.signal,
+
+        onChunk(content) {
+          updateSession(activeSessionId, (session) => ({
+            ...session,
+            messages: upsertAssistantMessage(session.messages, content),
+          }));
+        },
+      });
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         return;
