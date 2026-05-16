@@ -1,16 +1,12 @@
-import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
 import { Model } from "@/app/types";
 import { appendMessage, updateMessageContent } from "@/util/messageUtils";
 
 import { generateAssistantResponse } from "@/lib/chatService";
-import { ChatStatus } from "@/app/types";
 import { createMessage } from "@/util/createMessage";
 import { DEFAULT_MODEL, useChatSessions } from "./useChatSessions";
+import { useChatRequest } from "./useChatRequest";
 
 export function useChat() {
-  const [status, setStatus] = useState<ChatStatus>("idle");
-  const [error, setError] = useState<string | null>(null);
-
   const {
     sessions,
     activeSession,
@@ -23,7 +19,14 @@ export function useChat() {
     appendUserMessage,
   } = useChatSessions();
 
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const {
+    status,
+    error,
+    setError,
+    startRequest,
+    finishRequest,
+    cancelRequest,
+  } = useChatRequest();
 
   const messages = activeSession?.messages ?? [];
 
@@ -38,31 +41,7 @@ export function useChat() {
     }));
   }
 
-  function stopActiveRequest() {
-    abortControllerRef.current?.abort();
-  }
-
-  function resetRequestState() {
-    abortControllerRef.current = null;
-    setStatus("idle");
-    setError(null);
-  }
-
-  function cancelRequest() {
-    stopActiveRequest();
-    resetRequestState();
-  }
-
-  useEffect(() => {
-    return () => {
-      stopActiveRequest();
-    };
-  }, []);
-
-  async function sendMessage(
-    input: string,
-    setInput: Dispatch<SetStateAction<string>>
-  ) {
+  async function sendMessage(input: string) {
     if (!input.trim() || status === "streaming" || !activeSessionId) {
       return;
     }
@@ -88,14 +67,8 @@ export function useChat() {
 
     appendUserMessage(activeSessionId, userMessage, nextMessages);
 
-    setInput("");
-    setError(null);
-    setStatus("streaming");
-
     try {
-      const controller = new AbortController();
-
-      abortControllerRef.current = controller;
+      const controller = startRequest();
 
       await generateAssistantResponse({
         messages: nextMessages,
@@ -122,8 +95,7 @@ export function useChat() {
 
       console.error(error);
     } finally {
-      abortControllerRef.current = null;
-      setStatus("idle");
+      finishRequest();
     }
   }
 

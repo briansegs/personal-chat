@@ -35,14 +35,16 @@ export default function ChatClient() {
   function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault();
 
-    sendMessage(input, setInput);
+    sendMessage(input);
+    setInput("");
   }
 
   function triggerSendMessage(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey && status === "idle") {
       e.preventDefault();
 
-      sendMessage(input, setInput);
+      sendMessage(input);
+      setInput("");
     }
   }
 
