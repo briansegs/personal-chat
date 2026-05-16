@@ -30,6 +30,18 @@ export default function ChatClient() {
   } = useChat();
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const previousStatusRef = useRef(status);
+
+  useEffect(() => {
+    const wasBusy = previousStatusRef.current !== "idle";
+    const isNowIdle = status === "idle";
+
+    if (wasBusy && isNowIdle) {
+      textareaRef.current?.focus();
+    }
+
+    previousStatusRef.current = status;
+  }, [status]);
 
   useEffect(() => {
     const textarea = textareaRef.current;
@@ -48,13 +60,19 @@ export default function ChatClient() {
 
   function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault();
+
     sendMessage();
+
+    textareaRef.current?.focus();
   }
 
   function triggerSendMessage(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey && status === "idle") {
       e.preventDefault();
+
       sendMessage();
+
+      textareaRef.current?.focus();
     }
   }
 
