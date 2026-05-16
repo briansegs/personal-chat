@@ -13,7 +13,7 @@ export function ReturnToBottomButton({
       type="button"
       aria-label="Scroll to latest messages"
       onClick={scrollToBottom}
-      className="sticky top-0 left-1/2 -translate-x-1/2"
+      className="absolute top-4 left-1/2 -translate-x-1/2 "
       size="icon"
     >
       <ArrowDownIcon weight="fill" size={24} />

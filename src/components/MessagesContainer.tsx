@@ -11,9 +11,13 @@ import { ReturnToBottomButton } from "./ReturnToBottomButton";
 
 type MessagesContainerProps = {
   messages: Message[];
+  focusTextarea: () => void;
 };
 
-export function MessagesContainer({ messages }: MessagesContainerProps) {
+export function MessagesContainer({
+  messages,
+  focusTextarea,
+}: MessagesContainerProps) {
   const [showNewMessages, setShowNewMessages] = useState(false);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -37,9 +41,11 @@ export function MessagesContainer({ messages }: MessagesContainerProps) {
 
       shouldAutoScroll.current = isNearBottom;
 
+      const shouldShow = !isNearBottom;
+
       setShowNewMessages((prev) => {
-        if (prev === !isNearBottom) return prev;
-        return !isNearBottom;
+        if (prev === shouldShow) return prev;
+        return shouldShow;
       });
     };
 
@@ -65,56 +71,59 @@ export function MessagesContainer({ messages }: MessagesContainerProps) {
 
     shouldAutoScroll.current = true;
     setShowNewMessages(false);
+    focusTextarea();
   }
 
   return (
     <div
       ref={containerRef}
-      className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-gutter-stable overscroll-contain"
+      className="flex-1 overflow-y-auto overscroll-contain"
     >
-      {showNewMessages && (
-        <ReturnToBottomButton scrollToBottom={scrollToBottom} />
-      )}
+      <div className="mx-auto w-full max-w-3xl px-6 pt-16 pb-40 space-y-4">
+        {showNewMessages && (
+          <ReturnToBottomButton scrollToBottom={scrollToBottom} />
+        )}
 
-      {messages.map((msg, i) => (
-        <div
-          key={i}
-          className={`p-3 rounded-lg whitespace-pre-wrap  ${
-            msg.role === "user"
-              ? "bg-secondary text-foreground ml-auto w-fit"
-              : "text-muted-foreground"
-          }`}
-        >
-          <ReactMarkdown
-            remarkPlugins={[remarkGfm]}
-            components={{
-              code(props) {
-                const { children, className } = props;
-
-                const match = /language-(\w+)/.exec(className || "");
-
-                return match ? (
-                  <SyntaxHighlighter
-                    PreTag="div"
-                    language={match[1]}
-                    style={oneDark}
-                  >
-                    {String(children).replace(/\n$/, "")}
-                  </SyntaxHighlighter>
-                ) : (
-                  <code className="bg-gray-200 px-1 py-0.5 rounded">
-                    {children}
-                  </code>
-                );
-              },
-            }}
+        {messages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`p-3 rounded-lg whitespace-pre-wrap  ${
+              msg.role === "user"
+                ? "bg-secondary text-foreground ml-auto w-fit"
+                : "text-muted-foreground"
+            }`}
           >
-            {msg.content}
-          </ReactMarkdown>
-        </div>
-      ))}
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                code(props) {
+                  const { children, className } = props;
 
-      <div ref={bottomRef} />
+                  const match = /language-(\w+)/.exec(className || "");
+
+                  return match ? (
+                    <SyntaxHighlighter
+                      PreTag="div"
+                      language={match[1]}
+                      style={oneDark}
+                    >
+                      {String(children).replace(/\n$/, "")}
+                    </SyntaxHighlighter>
+                  ) : (
+                    <code className="bg-gray-200 px-1 py-0.5 rounded">
+                      {children}
+                    </code>
+                  );
+                },
+              }}
+            >
+              {msg.content}
+            </ReactMarkdown>
+          </div>
+        ))}
+
+        <div ref={bottomRef} />
+      </div>
     </div>
   );
 }

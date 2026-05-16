@@ -20,6 +20,7 @@ type ChatSidebarProps = {
   createNewSession: () => void;
   deleteSession: (id: string) => void;
   renameSession: (sessionId: string, title: string) => void;
+  focusTextarea: () => void;
 };
 
 export function ChatSidebar({
@@ -29,6 +30,7 @@ export function ChatSidebar({
   createNewSession,
   deleteSession,
   renameSession,
+  focusTextarea,
 }: ChatSidebarProps) {
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
 
@@ -39,7 +41,15 @@ export function ChatSidebar({
       <div className="h-24" />
       <SidebarContent>
         <SidebarGroup>
-          <Button onClick={createNewSession}>
+          <Button
+            onClick={() => {
+              createNewSession();
+
+              requestAnimationFrame(() => {
+                focusTextarea();
+              });
+            }}
+          >
             New Session <PlusIcon />
           </Button>
         </SidebarGroup>
@@ -74,7 +84,13 @@ export function ChatSidebar({
                   />
                 ) : (
                   <Button
-                    onClick={() => setActiveSessionId(session.id)}
+                    onClick={() => {
+                      setActiveSessionId(session.id);
+
+                      requestAnimationFrame(() => {
+                        focusTextarea();
+                      });
+                    }}
                     onDoubleClick={() => {
                       setEditingSessionId(session.id);
                       setDraftTitle(session.title);
