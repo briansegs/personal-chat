@@ -8,6 +8,7 @@ import { InputContainer } from "@/components/InputContainer";
 import { useChat } from "@/hooks/useChat";
 import { SidebarProvider, SidebarTrigger } from "./ui/sidebar";
 import { ChatSidebar } from "./ChatSidebar";
+import { toast } from "sonner";
 
 export default function ChatClient() {
   const {
@@ -31,6 +32,12 @@ export default function ChatClient() {
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const previousStatusRef = useRef(status);
+
+  useEffect(() => {
+    if (!error) return;
+
+    toast.error(error);
+  }, [error]);
 
   useEffect(() => {
     const wasBusy = previousStatusRef.current !== "idle";

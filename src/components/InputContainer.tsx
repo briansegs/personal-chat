@@ -28,14 +28,13 @@ export function InputContainer({
   model,
   setModel,
   stopGenerating,
-  error,
 }: InputContainerProps) {
   return (
     <form
       onSubmit={handleSubmit}
       className="flex flex-col gap-2 border p-2 relative bg-card shadow"
     >
-      {status !== "idle" && <StatusMessage error={error} status={status} />}
+      {status === "streaming" && <StatusMessage />}
 
       <Textarea
         ref={textareaRef}

@@ -170,7 +170,6 @@ export function useChat() {
     setError(null);
     setStatus("streaming");
 
-    let failed = false;
     try {
       const controller = new AbortController();
 
@@ -197,15 +196,12 @@ export function useChat() {
         return;
       }
 
-      failed = true;
-      setStatus("error");
       setError(error instanceof Error ? error.message : "Unknown error");
+
       console.error(error);
     } finally {
       abortControllerRef.current = null;
-      if (!failed) {
-        setStatus("idle");
-      }
+      setStatus("idle");
     }
   }
 
