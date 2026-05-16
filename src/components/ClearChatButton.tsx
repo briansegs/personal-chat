@@ -1,12 +1,12 @@
 import { Button } from "./ui/button";
 
 type ClearChatButtonProps = {
-  clearChat: () => void;
+  handleClearChat: () => void;
 };
 
-export function ClearChatButton({ clearChat }: ClearChatButtonProps) {
+export function ClearChatButton({ handleClearChat }: ClearChatButtonProps) {
   return (
-    <Button type="button" onClick={clearChat} variant="destructive">
+    <Button type="button" onClick={handleClearChat} variant="destructive">
       Clear Chat
     </Button>
   );

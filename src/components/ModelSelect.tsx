@@ -44,7 +44,7 @@ export function ModelSelect({ setModel, model }: ModelSelectProps) {
         }
       }}
     >
-      <SelectTrigger className="pl-2 pr-4">
+      <SelectTrigger className="pl-2 pr-4 border-none">
         <SelectValue />
       </SelectTrigger>
 

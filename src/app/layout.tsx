@@ -8,6 +8,7 @@ import {
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Toaster } from "@/components/ui/sonner";
 
 const playfairDisplayHeading = Playfair_Display({
   subsets: ["latin"],
@@ -50,7 +51,10 @@ export default function RootLayout({
       )}
     >
       <body className="min-h-full flex flex-col">
-        <TooltipProvider>{children}</TooltipProvider>
+        <TooltipProvider>
+          <Toaster richColors />
+          {children}
+        </TooltipProvider>
       </body>
     </html>
   );

@@ -28,14 +28,13 @@ export function InputContainer({
   model,
   setModel,
   stopGenerating,
-  error,
 }: InputContainerProps) {
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-2 border p-2 relative bg-card shadow"
+      className="flex flex-col gap-2 border p-2 bg-card/30 backdrop-blur-md shadow w-[calc(100%-2rem)] max-w-3xl absolute bottom-4 left-1/2 -translate-x-1/2"
     >
-      {status !== "idle" && <StatusMessage error={error} status={status} />}
+      {status === "streaming" && <StatusMessage />}
 
       <Textarea
         ref={textareaRef}
@@ -45,6 +44,7 @@ export function InputContainer({
         placeholder="Ask something..."
         rows={1}
         disabled={status === "streaming"}
+        className="placeholder:text-primary/70"
       />
 
       <div className="flex items-center justify-between">
