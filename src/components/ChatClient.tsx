@@ -34,6 +34,10 @@ export default function ChatClient() {
   const previousStatusRef = useRef(status);
 
   useEffect(() => {
+    textareaRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
     if (!error) return;
 
     toast.error(error);
