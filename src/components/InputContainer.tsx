@@ -44,6 +44,7 @@ export function InputContainer({
         placeholder="Ask something..."
         rows={1}
         disabled={status === "streaming"}
+        className="placeholder:text-primary/70"
       />
 
       <div className="flex items-center justify-between">
