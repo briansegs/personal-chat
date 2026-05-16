@@ -80,7 +80,7 @@ export function useChatSessions() {
     }));
   }
 
-  function appendUserMessage(
+  function appendChatTurn(
     sessionId: string,
     userMessage: Message,
     nextMessages: Message[]
@@ -127,6 +127,6 @@ export function useChatSessions() {
     deleteSession,
     renameSession,
     updateSession,
-    appendUserMessage,
+    appendChatTurn,
   };
 }

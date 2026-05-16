@@ -1,10 +1,10 @@
 import { Model } from "@/app/types";
-import { appendMessage, updateMessageContent } from "@/util/messageUtils";
+import { updateMessageContent } from "@/util/messageUtils";
 
 import { generateAssistantResponse } from "@/lib/chatService";
-import { createMessage } from "@/util/createMessage";
 import { DEFAULT_MODEL, useChatSessions } from "./useChatSessions";
 import { useChatRequest } from "./useChatRequest";
+import { createChatTurn } from "@/util/createChatTurn";
 
 export function useChat() {
   const {
@@ -16,7 +16,7 @@ export function useChat() {
     deleteSession,
     renameSession,
     updateSession,
-    appendUserMessage,
+    appendChatTurn,
   } = useChatSessions();
 
   const {
@@ -41,31 +41,30 @@ export function useChat() {
     }));
   }
 
+  function updateAssistantMessage(
+    sessionId: string,
+    messageId: string,
+    content: string
+  ) {
+    updateSession(sessionId, (session) => ({
+      ...session,
+      messages: updateMessageContent(session.messages, messageId, content),
+    }));
+  }
+
   async function sendMessage(input: string) {
     if (!input.trim() || status === "streaming" || !activeSessionId) {
       return;
     }
 
-    const userMessage = createMessage({
-      role: "user",
-      content: input,
-    });
+    if (!activeSession) return;
 
-    const session = sessions.find((session) => session.id === activeSessionId);
-
-    if (!session) return;
-
-    const assistantMessage = createMessage({
-      role: "assistant",
-      content: "",
-    });
-
-    const nextMessages = appendMessage(
-      appendMessage(session.messages, userMessage),
-      assistantMessage
+    const { nextMessages, userMessage, assistantMessage } = createChatTurn(
+      input,
+      activeSession.messages
     );
 
-    appendUserMessage(activeSessionId, userMessage, nextMessages);
+    appendChatTurn(activeSessionId, userMessage, nextMessages);
 
     try {
       const controller = startRequest();
@@ -76,14 +75,7 @@ export function useChat() {
         signal: controller.signal,
 
         onChunk(content) {
-          updateSession(activeSessionId, (session) => ({
-            ...session,
-            messages: updateMessageContent(
-              session.messages,
-              assistantMessage.id,
-              content
-            ),
-          }));
+          updateAssistantMessage(activeSessionId, assistantMessage.id, content);
         },
       });
     } catch (error) {
@@ -110,10 +102,6 @@ export function useChat() {
     }));
   }
 
-  function stopGenerating() {
-    cancelRequest();
-  }
-
   return {
     status,
     messages,
@@ -121,7 +109,7 @@ export function useChat() {
     setModel,
     sendMessage,
     clearChat,
-    stopGenerating,
+    stopGenerating: cancelRequest,
     sessions,
     activeSession,
     activeSessionId,
