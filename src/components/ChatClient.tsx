@@ -108,7 +108,7 @@ export default function ChatClient() {
         </div>
 
         <main className="h-screen flex flex-col bg-background">
-          <div className="absolute left-72 top-4">
+          <div className="absolute md:left-72 top-4 left-16">
             <Header />
           </div>
 

@@ -32,7 +32,7 @@ export function InputContainer({
   return (
     <form
       onSubmit={handleSubmit}
-      className="flex flex-col gap-2 border p-2 bg-card/30 backdrop-blur-md shadow w-3xl absolute bottom-4 left-1/2 -translate-x-1/2"
+      className="flex flex-col gap-2 border p-2 bg-card/30 backdrop-blur-md shadow w-[calc(100%-2rem)] max-w-3xl absolute bottom-4 left-1/2 -translate-x-1/2"
     >
       {status === "streaming" && <StatusMessage />}
 
