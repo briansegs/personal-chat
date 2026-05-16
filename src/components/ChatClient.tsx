@@ -11,8 +11,6 @@ import { useChatUI } from "@/hooks/useChatUI";
 
 export default function ChatClient() {
   const {
-    input,
-    setInput,
     status,
     messages,
     model,
@@ -29,19 +27,22 @@ export default function ChatClient() {
     error,
   } = useChat();
 
-  const { textareaRef, focusTextarea } = useChatUI(status, error, input);
+  const { input, setInput, textareaRef, focusTextarea } = useChatUI(
+    status,
+    error
+  );
 
   function handleSubmit(e: React.SubmitEvent) {
     e.preventDefault();
 
-    sendMessage();
+    sendMessage(input, setInput);
   }
 
   function triggerSendMessage(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey && status === "idle") {
       e.preventDefault();
 
-      sendMessage();
+      sendMessage(input, setInput);
     }
   }
 

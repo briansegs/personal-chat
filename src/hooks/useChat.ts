@@ -1,42 +1,29 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocalStorage } from "@/hooks/useLocalStorage";
-import { ChatSession, Message, Model } from "@/app/types";
+import { Dispatch, SetStateAction, useEffect, useRef, useState } from "react";
+import { Model } from "@/app/types";
 import { appendMessage, updateMessageContent } from "@/util/messageUtils";
-import {
-  DEFAULT_TITLE,
-  generateSessionTitle,
-  isDefaultTitle,
-} from "@/util/titleUtils";
+
 import { generateAssistantResponse } from "@/lib/chatService";
 import { ChatStatus } from "@/app/types";
 import { createMessage } from "@/util/createMessage";
-
-const SESSION_KEY = "chat-sessions";
-const ACTIVE_SESSION = "active-chat-session";
-const DEFAULT_MODEL: Model = "phi3";
-
-function now() {
-  return new Date().toISOString();
-}
+import { DEFAULT_MODEL, useChatSessions } from "./useChatSessions";
 
 export function useChat() {
-  const [input, setInput] = useState("");
   const [status, setStatus] = useState<ChatStatus>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [sessions, setSessions] = useLocalStorage<ChatSession[]>(
-    SESSION_KEY,
-    []
-  );
-  const [activeSessionId, setActiveSessionId] = useLocalStorage<string | null>(
-    ACTIVE_SESSION,
-    null
-  );
+
+  const {
+    sessions,
+    activeSession,
+    activeSessionId,
+    setActiveSessionId,
+    createNewSession,
+    deleteSession,
+    renameSession,
+    updateSession,
+    appendUserMessage,
+  } = useChatSessions();
 
   const abortControllerRef = useRef<AbortController | null>(null);
-
-  const activeSession = sessions.find(
-    (session) => session.id === activeSessionId
-  );
 
   const messages = activeSession?.messages ?? [];
 
@@ -66,81 +53,16 @@ export function useChat() {
     resetRequestState();
   }
 
-  const createNewSession = useCallback(() => {
-    const newSession: ChatSession = {
-      id: crypto.randomUUID(),
-      title: DEFAULT_TITLE,
-      model: DEFAULT_MODEL,
-      createdAt: now(),
-      updatedAt: now(),
-      messages: [],
-    };
-
-    setSessions((prev) => [newSession, ...prev]);
-    setActiveSessionId(newSession.id);
-  }, [setSessions, setActiveSessionId]);
-
   useEffect(() => {
     return () => {
       stopActiveRequest();
     };
   }, []);
 
-  useEffect(() => {
-    if (sessions.length === 0) {
-      createNewSession();
-    }
-  }, [sessions.length, createNewSession]);
-
-  useEffect(() => {
-    if (!activeSessionId) {
-      setActiveSessionId(sessions[0]?.id ?? null);
-      return;
-    }
-
-    const hasActiveSession = sessions.some(
-      (session) => session.id === activeSessionId
-    );
-
-    if (!hasActiveSession) {
-      setActiveSessionId(sessions[0]?.id ?? null);
-    }
-  }, [sessions, activeSessionId, setActiveSessionId]);
-
-  const updateSession = useCallback(
-    (sessionId: string, updater: (session: ChatSession) => ChatSession) => {
-      setSessions((prev) =>
-        prev.map((session) =>
-          session.id === sessionId
-            ? {
-                ...updater(session),
-                updatedAt: now(),
-              }
-            : session
-        )
-      );
-    },
-    [setSessions]
-  );
-
-  function appendUserMessage(
-    sessionId: string,
-    userMessage: Message,
-    nextMessages: Message[]
+  async function sendMessage(
+    input: string,
+    setInput: Dispatch<SetStateAction<string>>
   ) {
-    updateSession(sessionId, (session) => {
-      const shouldGenerateTitle = isDefaultTitle(session.title);
-      return {
-        ...session,
-        title: shouldGenerateTitle
-          ? generateSessionTitle(userMessage.content)
-          : session.title,
-        messages: nextMessages,
-      };
-    });
-  }
-
-  async function sendMessage() {
     if (!input.trim() || status === "streaming" || !activeSessionId) {
       return;
     }
@@ -220,30 +142,7 @@ export function useChat() {
     cancelRequest();
   }
 
-  function deleteSession(sessionId: string) {
-    const updated = sessions.filter((session) => session.id !== sessionId);
-
-    setSessions(updated);
-
-    if (activeSessionId === sessionId) {
-      setActiveSessionId(updated[0]?.id ?? null);
-    }
-  }
-
-  function renameSession(sessionId: string, title: string) {
-    const trimmedTitle = title.trim();
-
-    if (!trimmedTitle) return;
-
-    updateSession(sessionId, (session) => ({
-      ...session,
-      title: trimmedTitle,
-    }));
-  }
-
   return {
-    input,
-    setInput,
     status,
     messages,
     model,

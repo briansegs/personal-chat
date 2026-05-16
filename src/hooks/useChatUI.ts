@@ -1,12 +1,10 @@
 import { ChatStatus } from "@/app/types";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
-export function useChatUI(
-  status: ChatStatus,
-  error: string | null,
-  input: string
-) {
+export function useChatUI(status: ChatStatus, error: string | null) {
+  const [input, setInput] = useState("");
+
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
   const previousStatusRef = useRef(status);
 
@@ -51,6 +49,8 @@ export function useChatUI(
   }, [input]);
 
   return {
+    input,
+    setInput,
     textareaRef,
     focusTextarea,
   };

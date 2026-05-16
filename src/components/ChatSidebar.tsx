@@ -86,10 +86,6 @@ export function ChatSidebar({
                   <Button
                     onClick={() => {
                       setActiveSessionId(session.id);
-
-                      requestAnimationFrame(() => {
-                        focusTextarea();
-                      });
                     }}
                     onDoubleClick={() => {
                       setEditingSessionId(session.id);
