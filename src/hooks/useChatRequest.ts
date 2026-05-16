@@ -17,8 +17,11 @@ export function useChatRequest() {
 
     return controller;
   }
+  function finishRequest(controller: AbortController) {
+    if (abortControllerRef.current !== controller) {
+      return;
+    }
 
-  function finishRequest() {
     abortControllerRef.current = null;
     setStatus("idle");
   }

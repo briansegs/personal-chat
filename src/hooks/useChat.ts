@@ -66,9 +66,9 @@ export function useChat() {
 
     appendChatTurn(activeSessionId, userMessage, nextMessages);
 
-    try {
-      const controller = startRequest();
+    const controller = startRequest();
 
+    try {
       await generateAssistantResponse({
         messages: nextMessages,
         model,
@@ -87,7 +87,7 @@ export function useChat() {
 
       console.error(error);
     } finally {
-      finishRequest();
+      finishRequest(controller);
     }
   }
 
