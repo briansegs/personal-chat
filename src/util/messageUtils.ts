@@ -1,9 +1,5 @@
 import { Message } from "@/app/types";
 
-export function appendMessage(messages: Message[], message: Message) {
-  return [...messages, message];
-}
-
 export function updateMessageContent(
   messages: Message[],
   messageId: string,
